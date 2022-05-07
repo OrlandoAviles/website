@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+		body{
+			background-color: black;
+		    margin: 0; 
+		}
+
+
+	</style>
+</head>
+<body>
+    <br>
+    <br>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+
+        let buttonCounter = 0;
+
+        window.onload = function(){
+            canvas = document.getElementById("gameCanvas");
+            context=canvas.getContext("2d");
+            setInterval(update, 1000/30);
+
+        }
+
+        function update(){
+            cWidth = window.innerWidth;
+            cHeight = window.innerHeight/2;
+            canvas.width = cWidth;
+            canvas.height = cHeight;
+            context.fillStyle = "#000088";
+            context.fillRect(0, 0, cWidth, cHeight);
+
+            counterHUD();
+        }
+
+        function counterHUD(){
+            context.fillStyle = "#000000";
+            context.strokeStyle = "#ffffff";
+            context.fillText(buttonCounter, cWidth/2, cHeight/2);
+            context.strokeText(buttonCounter, cWidth/2, cHeight/2);
+        }
+
+        function gainPoint(){
+            buttonCounter += 1;
+        }
+    </script>
+    <button type="button" onclick="gainPoint()">Click Me!</button>
+
+</body>
+</html>
