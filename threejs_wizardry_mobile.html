@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>ThreeJS — Grid Dungeon (Mobile)</title>
+  <style>
+    html,body{height:100%;margin:0;background:#0b0b0b;color:#eee;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto}
+    #app{height:100%;width:100%;position:relative;overflow:hidden}
+    canvas{display:block}
+    .hud{position:absolute;left:12px;top:12px;background:rgba(0,0,0,0.25);backdrop-filter:blur(4px);padding:8px;border-radius:8px}
+    .buttons{position:absolute;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(3,56px);gap:8px}
+    .btn{width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;box-shadow:0 6px 12px rgba(0,0,0,0.6)}
+    .hint{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,0.28);padding:8px;border-radius:8px;font-size:13px}
+    .mini{width:120px;height:120px;border-radius:8px;overflow:hidden}
+    .title{font-size:14px;margin-bottom:4px}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="hud" id="hud">
+      <div class="title">Grid Dungeon — mobile demo</div>
+      <div>Swipe to move/turn — tap arrows if nervous</div>
+    </div>
+
+    <div class="buttons" id="buttons" aria-hidden>
+      <div class="btn" id="left">⟲</div>
+      <div class="btn" id="forward">▲</div>
+      <div class="btn" id="right">⟳</div>
+      <div style="grid-column:2/span1"></div>
+      <div class="btn" id="back">▼</div>
+      <div style="grid-column:3/span1"></div>
+    </div>
+
+    <div class="hint">Tap to focus. Hold two fingers to run.</div>
+  </div>
+
+  <!-- THREE.js from CDN (global THREE) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+  <script>
+  // --- CONFIG ---
+  const CELL_SIZE = 1;
+  const MAP_W = 11;
+  const MAP_H = 11;
+  const PLAYER_HEIGHT = 1;
+  const MOVE_DURATION = 180;
+  const TURN_DURATION = 140;
+
+  function generateMap(w,h,seedRandom=null){
+    const map = Array.from({length:h},()=>Array(w).fill(0));
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        if(x===0||y===0||x===w-1||y===h-1) map[y][x]=1;
+        else if((x%2===0) && (y%2===0)) map[y][x]=1;
+        else map[y][x]=0;
+      }
+    }
+    const rand = seedRandom||(()=>Math.random());
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        if(map[y][x]===0 && rand() < 0.22){
+          map[y][x]=1;
+        }
+      }
+    }
+    const cx=Math.floor(w/2), cy=Math.floor(h/2);
+    map[cy][cx]=0;
+    return map;
+  }
+
+  const canvasParent = document.getElementById('app');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x070709);
+
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  canvasParent.appendChild(renderer.domElement);
+
+  // widen camera FOV
+  const camera = new THREE.PerspectiveCamera(90, window.innerWidth/window.innerHeight, 0.1, 100);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+  hemi.position.set(0,20,0);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xfff7d6, 0.6);
+  dir.position.set(5,10,2);
+  scene.add(dir);
+
+  // Player-attached point light
+  const playerLight = new THREE.PointLight(0xffeeaa, 1, 6, 2);
+  scene.add(playerLight);
+
+  const floorMat = new THREE.MeshStandardMaterial({color:0x1b1b1b, metalness:0.1, roughness:0.9});
+  const floorGeo = new THREE.PlaneGeometry(MAP_W*CELL_SIZE, MAP_H*CELL_SIZE);
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.set((MAP_W-1)/2*CELL_SIZE, 0, (MAP_H-1)/2*CELL_SIZE);
+  scene.add(floor);
+
+  const walls = new THREE.Group();
+  scene.add(walls);
+
+  const wallMat = new THREE.MeshStandardMaterial({color:0x6b4b3b, roughness:0.85, metalness:0.05});
+  const wallGeo = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE*2, CELL_SIZE);
+
+  const map = generateMap(MAP_W, MAP_H);
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      if(map[y][x]===1){
+        const m = new THREE.Mesh(wallGeo, wallMat);
+        m.position.set(x*CELL_SIZE, CELL_SIZE, y*CELL_SIZE);
+        walls.add(m);
+      }
+    }
+  }
+
+  const gridHelper = new THREE.GridHelper(Math.max(MAP_W,MAP_H)*CELL_SIZE, Math.max(MAP_W,MAP_H), 0x222222, 0x111111);
+  gridHelper.position.copy(floor.position);
+  scene.add(gridHelper);
+
+  let player = {
+    gx: Math.floor(MAP_W/2),
+    gy: Math.floor(MAP_H/2),
+    dir: 0 // 0 = north(-z), 1 = east(+x), 2 = south(+z), 3 = west(-x)
+  };
+
+  function cellToWorld(gx,gy){
+    return {
+      x: gx*CELL_SIZE,
+      y: PLAYER_HEIGHT,
+      z: gy*CELL_SIZE
+    };
+  }
+
+  const camPos = cellToWorld(player.gx, player.gy);
+  camera.position.set(camPos.x, camPos.y, camPos.z);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.x = 0;
+  camera.lookAt(camPos.x, camPos.y, camPos.z - 1);
+  playerLight.position.set(camPos.x, camPos.y, camPos.z);
+
+  let anim = null;
+
+  function animateMove(toGx,toGy){
+    if(anim) return;
+    if(map[toGy][toGx]===1) return;
+    const fromWorld = cellToWorld(player.gx, player.gy);
+    const toWorld = cellToWorld(toGx, toGy);
+    anim = {type:'move', t0:performance.now(), duration: MOVE_DURATION, from:fromWorld, to:toWorld, fromG:{gx:player.gx,gy:player.gy}, toG:{gx:toGx,gy:toGy}};
+    player.gx = toGx; player.gy = toGy;
+  }
+
+  function animateTurn(dirDelta){
+    if(anim) return;
+    const fromDir = player.dir;
+    const toDir = (player.dir + dirDelta + 4)%4;
+    anim = {type:'turn', t0:performance.now(), duration: TURN_DURATION, from:fromDir, to:toDir, dirDelta:dirDelta};
+    player.dir = toDir;
+  }
+
+  function stepForward(){
+    let nx=player.gx, ny=player.gy;
+    if(player.dir===0) ny -= 1;
+    if(player.dir===1) nx += 1;
+    if(player.dir===2) ny += 1;
+    if(player.dir===3) nx -= 1;
+    animateMove(nx, ny);
+  }
+  function stepBack(){
+    let nx=player.gx, ny=player.gy;
+    if(player.dir===0) ny += 1;
+    if(player.dir===1) nx -= 1;
+    if(player.dir===2) ny -= 1;
+    if(player.dir===3) nx += 1;
+    animateMove(nx, ny);
+  }
+
+  function render(now){
+    now = now || performance.now();
+    if(anim){
+      const p = Math.min(1, (now - anim.t0)/anim.duration);
+      if(anim.type==='move'){
+        const x = anim.from.x + (anim.to.x - anim.from.x) * easeInOutQuad(p);
+        const y = anim.from.y + (anim.to.y - anim.from.y) * easeInOutQuad(p);
+        const z = anim.from.z + (anim.to.z - anim.from.z) * easeInOutQuad(p);
+        camera.position.set(x,y,z);
+        playerLight.position.set(x,y,z);
+      } else if(anim.type==='turn'){
+        const fromAngle = anim.from * -Math.PI/2; // invert direction
+        const toAngle = anim.to * -Math.PI/2;
+        const ang = fromAngle + shortestAngleDiff(fromAngle, toAngle) * easeOutCubic(p);
+        camera.rotation.y = ang;
+      }
+      if(p>=1) anim=null;
+    } else {
+      const world = cellToWorld(player.gx, player.gy);
+      camera.position.set(world.x, world.y, world.z);
+      playerLight.position.set(world.x, world.y, world.z);
+      camera.rotation.y = player.dir * -Math.PI/2; // invert direction consistently
+    }
+
+    camera.rotation.x = -0.06;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+  function easeInOutQuad(t){return t<0.5?2*t*t: -1+(4-2*t)*t}
+  function easeOutCubic(t){return (--t)*t*t+1}
+  function shortestAngleDiff(a,b){
+    let diff = b - a;
+    while(diff > Math.PI) diff -= Math.PI*2;
+    while(diff < -Math.PI) diff += Math.PI*2;
+    return diff;
+  }
+
+  let touchStart = null;
+  let isTwoFinger = false;
+
+  function onTouchStart(e){
+    if(e.touches && e.touches.length>1) isTwoFinger = true; else isTwoFinger=false;
+    const t = e.touches ? e.touches[0] : e;
+    touchStart = {x:t.clientX, y:t.clientY, time:performance.now()};
+  }
+  function onTouchEnd(e){
+    if(!touchStart) return;
+    const t = (e.changedTouches && e.changedTouches[0]) || e;
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    touchStart = null;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    const threshold = 24;
+    if(Math.max(adx,ady) < threshold) return;
+
+    if(adx > ady){
+      if(dx > 0) {
+        animateTurn(1);
+      } else {
+        animateTurn(-1);
+      }
+    } else {
+      if(dy < 0) {
+        if(isTwoFinger) { stepForward(); setTimeout(stepForward, MOVE_DURATION+10);} else stepForward();
+      } else {
+        if(isTwoFinger){ stepBack(); setTimeout(stepBack, MOVE_DURATION+10);} else stepBack();
+      }
+    }
+  }
+
+  renderer.domElement.addEventListener('touchstart', onTouchStart, {passive:true});
+  renderer.domElement.addEventListener('touchend', onTouchEnd, {passive:true});
+  renderer.domElement.addEventListener('mousedown', onTouchStart);
+  renderer.domElement.addEventListener('mouseup', onTouchEnd);
+
+  document.getElementById('forward').addEventListener('click', ()=>stepForward());
+  document.getElementById('back').addEventListener('click', ()=>stepBack());
+  document.getElementById('left').addEventListener('click', ()=>animateTurn(-1));
+  document.getElementById('right').addEventListener('click', ()=>animateTurn(1));
+
+  renderer.domElement.addEventListener('click', ()=>renderer.domElement.requestPointerLock?.());
+
+  window.addEventListener('resize', ()=>{
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+
+  console.table(map);
+
+  (function createMini(){
+    const mini = document.createElement('canvas');
+    mini.width = MAP_W*8; mini.height = MAP_H*8; mini.className='mini';
+    mini.style.position='absolute'; mini.style.right='12px'; mini.style.top='12px';
+    mini.style.opacity='0.9'; mini.style.background='rgba(0,0,0,0.28)'; mini.style.padding='6px';
+    document.getElementById('hud').appendChild(mini);
+    const ctx = mini.getContext('2d');
+    function draw(){
+      ctx.clearRect(0,0,mini.width,mini.height);
+      for(let y=0;y<MAP_H;y++){
+        for(let x=0;x<MAP_W;x++){
+          ctx.fillStyle = map[y][x]===1? '#a36b53' : '#0a0a0a';
+          ctx.fillRect(x*8,y*8,8,8);
+        }
+      }
+      ctx.fillStyle='#00ffcc';
+      ctx.fillRect(player.gx*8+1, player.gy*8+1,6,6);
+      ctx.fillStyle='#00ffcc';
+      ctx.save();
+      ctx.translate((player.gx+0.5)*8, (player.gy+0.5)*8);
+      ctx.rotate(player.dir * Math.PI/2); // match inverted direction
+      ctx.beginPath(); ctx.moveTo(0,-5); ctx.lineTo(3,3); ctx.lineTo(-3,3); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  })();
+
+  (function intro(){
+    camera.position.y = 6;
+    const start = performance.now();
+    const dur = 800;
+    (function loop(){
+      const t = Math.min(1, (performance.now()-start)/dur);
+      camera.position.y = 6 - 4.4 * easeOutCubic(t);
+      camera.rotation.x = -0.4 * (1 - t);
+      if(t<1) requestAnimationFrame(loop);
+    })();
+  })();
+
+  </script>
+</body>
+</html>

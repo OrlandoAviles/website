@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shmup Maker - Play & Edit</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #222;
+      color: white;
+      overflow: hidden;
+    }
+    #topbar {
+      display: flex;
+      background: #333;
+      padding: 8px;
+    }
+    #topbar button {
+      margin-right: 10px;
+      padding: 6px 12px;
+      background: #555;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+    #workspace {
+      width: 100%;
+      height: calc(100vh - 40px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: black;
+    }
+    .mode {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    canvas {
+      border: 2px solid #000;
+    }
+    .toolbar {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .toolbar input, .toolbar button, .toolbar select {
+      margin-right: 5px;
+    }
+    #editorCanvas {
+      image-rendering: pixelated;
+      width: 512px;  /* scaled up for drawing comfort */
+      height: 512px;
+      background: repeating-conic-gradient(#ccc 0% 25%, #eee 0% 50%) 50% / 32px 32px;
+    }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <button onclick="setMode('play')">Play</button>
+    <button onclick="setMode('edit')">Edit</button>
+    <button id="pauseBtn" onclick="togglePause()">Pause</button>
+  </div>
+
+  <div id="workspace">
+    <!-- Play Mode -->
+    <div id="playMode" class="mode">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Edit Mode -->
+    <div id="editMode" class="mode">
+      <div class="toolbar">
+        <label>Target Sprite:
+          <select id="spriteSelect" onchange="loadSpriteToEditor()">
+            <option value="player">Player</option>
+            <option value="bullet">Bullet</option>
+            <option value="enemy">Enemy</option>
+            <option value="background">Background</option>
+          </select>
+        </label>
+        <label>Color: <input type="color" id="colorPicker" value="#000000"></label>
+        <label>Brush Size: <input type="range" id="brushSize" min="1" max="50" value="5"></label>
+        <button onclick="saveSprite()">Save</button>
+        <button onclick="clearEditor()">Clear</button>
+        <button onclick="setTool('brush')">Brush</button>
+        <button onclick="setTool('eraser')">Eraser</button>
+        <button onclick="setTool('bucket')">Paint Bucket</button>
+        <button onclick="setTool('line')">Line</button>
+      </div>
+      <canvas id="editorCanvas" width="128" height="128"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let mode = "play";
+    let paused = false;
+
+    function setMode(m) {
+      document.querySelectorAll(".mode").forEach(el => el.style.display = "none");
+      document.getElementById(m + "Mode").style.display = "flex";
+      mode = m;
+    }
+    setMode("play");
+
+    function togglePause() {
+      paused = !paused;
+      const pauseBtn = document.getElementById("pauseBtn");
+      pauseBtn.textContent = paused ? "Resume" : "Pause";
+      if (paused) {
+        lastSpawnTime = null; // freeze spawn timer
+      }
+    }
+
+    // --- SHMUP GAME ---
+    const gameCanvas = document.getElementById("gameCanvas");
+    const gctx = gameCanvas.getContext("2d");
+    gameCanvas.width = window.innerWidth;
+    gameCanvas.height = window.innerHeight - 40;
+
+    let sprites = {
+      player: null,
+      bullet: null,
+      enemy: null,
+      background: null
+    };
+
+    // Defaults (colored blocks)
+    function createDefaultSprite(color) {
+      const c = document.createElement("canvas");
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 128, 128);
+      let img = new Image();
+      img.src = c.toDataURL();
+      return img;
+    }
+
+    sprites.player = createDefaultSprite("cyan");
+    sprites.enemy = createDefaultSprite("red");
+    sprites.bullet = createDefaultSprite("yellow");
+    sprites.background = createDefaultSprite("black");
+
+    let player = { x: gameCanvas.width/2, y: gameCanvas.height - 100, w: 40, h: 40, bullets: [] };
+    let enemies = [];
+    let score = 0;
+    let lastShot = 0;
+    let lastSpawnTime = null;
+    const spawnInterval = 1000; // ms
+
+    let keys = {};
+    let touchStartX = null, touchStartY = null;
+    let playerStartX = null, playerStartY = null;
+    let pendingDx = 0, pendingDy = 0;
+
+    document.addEventListener("keydown", e => { keys[e.code] = true; });
+    document.addEventListener("keyup", e => { keys[e.code] = false; });
+
+    gameCanvas.addEventListener("touchstart", e => {
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      playerStartX = player.x;
+      playerStartY = player.y;
+      pendingDx = 0;
+      pendingDy = 0;
+    });
+
+    gameCanvas.addEventListener("touchmove", e => {
+      const touch = e.touches[0];
+      pendingDx = touch.clientX - touchStartX;
+      pendingDy = touch.clientY - touchStartY;
+    });
+
+    gameCanvas.addEventListener("touchend", () => {
+      touchStartX = null;
+      touchStartY = null;
+      pendingDx = 0;
+      pendingDy = 0;
+    });
+
+    function spawnEnemy() {
+      enemies.push({
+        x: Math.random() * (gameCanvas.width - 40),
+        y: -40,
+        w: 40,
+        h: 40,
+        speed: 2 + Math.random() * 2,
+        alive: true
+      });
+    }
+
+    function updateGame() {
+      const now = Date.now();
+
+      if (!lastSpawnTime) lastSpawnTime = now;
+      if (now - lastSpawnTime > spawnInterval) {
+        spawnEnemy();
+        lastSpawnTime = now;
+      }
+
+      if (touchStartX !== null && touchStartY !== null) {
+        player.x = playerStartX + pendingDx;
+        player.y = playerStartY + pendingDy;
+      }
+
+      if (keys["ArrowLeft"]) player.x -= 6;
+      if (keys["ArrowRight"]) player.x += 6;
+      if (keys["ArrowUp"]) player.y -= 6;
+      if (keys["ArrowDown"]) player.y += 6;
+
+      player.x = Math.max(0, Math.min(gameCanvas.width - player.w, player.x));
+      player.y = Math.max(0, Math.min(gameCanvas.height - player.h, player.y));
+
+      if (Date.now() - lastShot > 200) {
+        player.bullets.push({x: player.x + player.w/2 - 4, y: player.y, w: 8, h: 16});
+        lastShot = Date.now();
+      }
+
+      for (let b of player.bullets) b.y -= 8;
+      player.bullets = player.bullets.filter(b => b.y > -20);
+
+      for (let e of enemies) e.y += e.speed;
+      enemies = enemies.filter(e => e.y < gameCanvas.height + 50 && e.alive);
+
+      for (let b of player.bullets) {
+        for (let e of enemies) {
+          if (e.alive && b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+            e.alive = false;
+            b.y = -100;
+            score += 100;
+          }
+        }
+      }
+    }
+
+    function drawGame() {
+      gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+      if (sprites.background) gctx.drawImage(sprites.background, 0, 0, gameCanvas.width, gameCanvas.height);
+      if (sprites.player) gctx.drawImage(sprites.player, player.x, player.y, player.w, player.h);
+      if (sprites.bullet) for (let b of player.bullets) gctx.drawImage(sprites.bullet, b.x, b.y, b.w, b.h);
+      if (sprites.enemy) for (let e of enemies) if (e.alive) gctx.drawImage(sprites.enemy, e.x, e.y, e.w, e.h);
+      gctx.fillStyle = "white"; gctx.font = "20px sans-serif"; gctx.fillText("Score: " + score, 10, 30);
+      if (paused) {
+        gctx.fillStyle = "rgba(0,0,0,0.5)";
+        gctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+        gctx.fillStyle = "white";
+        gctx.font = "40px sans-serif";
+        gctx.fillText("Paused", gameCanvas.width/2 - 60, gameCanvas.height/2);
+      }
+    }
+
+    function gameLoop() {
+      if (mode === "play") {
+        if (!paused) updateGame();
+        drawGame();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+
+    // --- EDITOR ---
+    const editorCanvas = document.getElementById("editorCanvas");
+    const ectx = editorCanvas.getContext("2d");
+    let painting = false;
+    let color = document.getElementById("colorPicker").value;
+    let brushSize = document.getElementById("brushSize").value;
+    let tool = "brush";
+    let startX, startY;
+
+    function setTool(t) { tool = t; }
+
+    function startDraw(e) {
+      const rect = editorCanvas.getBoundingClientRect();
+      const scaleX = editorCanvas.width / rect.width;
+      const scaleY = editorCanvas.height / rect.height;
+      const x = ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
+      const y = ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+      if (tool === "bucket") fillBucket(Math.floor(x), Math.floor(y));
+      else if (tool === "line") { startX = x; startY = y; painting = true; }
+      else { painting = true; draw(e); }
+    }
+
+    function endDraw(e) {
+      if (tool === "line" && painting) {
+        const rect = editorCanvas.getBoundingClientRect();
+        const scaleX = editorCanvas.width / rect.width;
+        const scaleY = editorCanvas.height / rect.height;
+        const x = ((e.touches ? e.changedTouches[0].clientX : e.clientX) - rect.left) * scaleX;
+        const y = ((e.touches ? e.changedTouches[0].clientY : e.clientY) - rect.top) * scaleY;
+        ectx.strokeStyle = color;
+        ectx.lineWidth = brushSize;
+        ectx.beginPath();
+        ectx.moveTo(startX, startY);
+        ectx.lineTo(x, y);
+        ectx.stroke();
+      }
+      painting = false;
+      ectx.beginPath();
+    }
+
+    function draw(e) {
+      if (!painting || tool !== "brush" && tool !== "eraser") return;
+      const rect = editorCanvas.getBoundingClientRect();
+      const scaleX = editorCanvas.width / rect.width;
+      const scaleY = editorCanvas.height / rect.height;
+      const x = ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
+      const y = ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+      ectx.lineWidth = brushSize;
+      ectx.lineCap = "round";
+      if (tool === "eraser") {
+        ectx.globalCompositeOperation = "destination-out";
+      } else {
+        ectx.globalCompositeOperation = "source-over";
+        ectx.strokeStyle = color;
+      }
+      ectx.lineTo(x, y);
+      ectx.stroke();
+      ectx.beginPath();
+      ectx.moveTo(x, y);
+    }
+
+    function fillBucket(x, y) {
+      const imgData = ectx.getImageData(0, 0, editorCanvas.width, editorCanvas.height);
+      const data = imgData.data;
+      const targetIdx = (y * editorCanvas.width + x) * 4;
+      const targetColor = data.slice(targetIdx, targetIdx + 4);
+
+      const newColor = hexToRgba(color);
+      if (colorsMatch(targetColor, newColor)) return;
+
+      const stack = [[x, y]];
+      while (stack.length) {
+        const [cx, cy] = stack.pop();
+        if (cx < 0 || cy < 0 || cx >= editorCanvas.width || cy >= editorCanvas.height) continue;
+        const idx = (cy * editorCanvas.width + cx) * 4;
+        const current = data.slice(idx, idx + 4);
+        if (!colorsMatch(current, targetColor)) continue;
+        data[idx] = newColor[0];
+        data[idx+1] = newColor[1];
+        data[idx+2] = newColor[2];
+        data[idx+3] = newColor[3];
+        stack.push([cx+1, cy], [cx-1, cy], [cx, cy+1], [cx, cy-1]);
+      }
+      ectx.putImageData(imgData, 0, 0);
+    }
+
+    function hexToRgba(hex) {
+      const bigint = parseInt(hex.slice(1), 16);
+      return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255, 255];
+    }
+
+    function colorsMatch(c1, c2) {
+      return c1[0]===c2[0] && c1[1]===c2[1] && c1[2]===c2[2] && c1[3]===c2[3];
+    }
+
+    function loadSpriteToEditor() {
+      const target = document.getElementById("spriteSelect").value;
+      ectx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+      if (sprites[target]) {
+        ectx.drawImage(sprites[target], 0, 0);
+      }
+    }
+
+    editorCanvas.addEventListener("mousedown", startDraw);
+    editorCanvas.addEventListener("mouseup", endDraw);
+    editorCanvas.addEventListener("mousemove", draw);
+    editorCanvas.addEventListener("touchstart", startDraw);
+    editorCanvas.addEventListener("touchend", endDraw);
+    editorCanvas.addEventListener("touchmove", draw);
+
+    document.getElementById("colorPicker").addEventListener("change", e => color = e.target.value);
+    document.getElementById("brushSize").addEventListener("input", e => brushSize = e.target.value);
+
+    function saveSprite() {
+      const target = document.getElementById("spriteSelect").value;
+      const dataURL = editorCanvas.toDataURL("image/png");
+      let newImg = new Image();
+      newImg.src = dataURL;
+      sprites[target] = newImg;
+      setMode("play");
+    }
+
+        function clearEditor() {
+      ectx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+    }
+  </script>
+</body>
+</html>

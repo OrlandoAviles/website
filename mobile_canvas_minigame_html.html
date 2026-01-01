@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Pocket Dodge — Mobile Canvas Minigame</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0b0f14;
+      color: #e8f0ff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-user-select: none; user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none; /* allow touches to pass to canvas except on buttons */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: env(safe-area-inset-top) 12px 8px 12px;
+      gap: 8px;
+    }
+    .pill {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 6px 10px;
+      backdrop-filter: blur(6px);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .btn {
+      pointer-events: auto;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e8f0ff;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: translateY(1px); }
+
+    .center {
+      pointer-events: auto;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      gap: 12px;
+    }
+    .title { font-size: 22px; font-weight: 900; letter-spacing: 0.5px; }
+    .subtitle { opacity: 0.8; font-size: 14px; }
+    .hint { opacity: 0.8; font-size: 13px; }
+
+    /* Virtual joystick visuals */
+    #stickBase, #stickKnob {
+      position: fixed; left: 0; top: 0; width: 0; height: 0;
+      border-radius: 999px; pointer-events: none;
+      opacity: 0; transition: opacity 120ms ease;
+    }
+    #stickBase { border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); }
+    #stickKnob { border: 2px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.18); }
+
+    canvas { display:block; width:100vw; height:100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div class="topbar">
+      <div class="pill" id="scorePill">Score 0</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" id="pauseBtn">Pause</button>
+        <button class="btn" id="muteBtn">Mute</button>
+      </div>
+    </div>
+
+    <div class="center" id="overlay" hidden>
+      <div class="title" id="overlayTitle">Pocket Dodge</div>
+      <div class="subtitle" id="overlayBody">Drag to move. Avoid red. Collect stars. Survive to score.
+      </div>
+      <button class="btn" id="playBtn">Tap to Play</button>
+      <div class="hint">Tip: Joystick appears where you touch. Works with mouse too.</div>
+    </div>
+  </div>
+
+  <div id="stickBase"></div>
+  <div id="stickKnob"></div>
+
+  <script>
+  ;(() => {
+    // Simple mobile-friendly HTML5 canvas minigame: dodge obstacles, collect stars.
+    // Single-file, no libraries. Designed for touch with a virtual joystick.
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+
+    function resize() {
+      const w = Math.floor(window.innerWidth * DPR);
+      const h = Math.floor(window.innerHeight * DPR);
+      canvas.width = w; canvas.height = h;
+    }
+    window.addEventListener('resize', resize, { passive: true });
+    resize();
+
+    // UI elements
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlayBody = document.getElementById('overlayBody');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const scorePill = document.getElementById('scorePill');
+
+    // Virtual joystick elements
+    const stickBase = document.getElementById('stickBase');
+    const stickKnob = document.getElementById('stickKnob');
+
+    const State = { Start: 0, Playing: 1, Paused: 2, GameOver: 3 };
+    let state = State.Start;
+
+    // Game world
+    const world = {
+      t: 0,
+      score: 0,
+      best: 0,
+      player: { x: 0, y: 0, r: 16, speed: 240, vx: 0, vy: 0, invuln: 0 },
+      foes: [],
+      stars: [],
+      spawnFoeTimer: 0,
+      spawnStarTimer: 0,
+      rng: mulberry32(Math.floor(Math.random()*1e9))
+    };
+
+    // Audio (optional, simple beep using WebAudio)
+    const audio = new (window.AudioContext||window.webkitAudioContext||function(){})();
+    let muted = false;
+    function beep(freq=660, dur=0.06, t=0) {
+      if (!audio.createOscillator || muted) return;
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.value = 0.0001; // attack from silence
+      o.connect(g); g.connect(audio.destination);
+      const now = audio.currentTime + t;
+      o.start(now);
+      g.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      o.stop(now + dur + 0.005);
+    }
+
+    muteBtn.addEventListener('click', () => {
+      muted = !muted; muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+      if (!muted && audio.resume) audio.resume();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      if (state === State.Playing) {
+        state = State.Paused; showOverlay('Paused', 'Tap to resume');
+      } else if (state === State.Paused) {
+        hideOverlay(); state = State.Playing;
+      }
+    });
+
+    playBtn.addEventListener('click', () => {
+      if (audio.resume) audio.resume();
+      startGame();
+    });
+
+    function showOverlay(title, body, buttonText='Tap to Play') {
+      overlayTitle.textContent = title; overlayBody.textContent = body;
+      playBtn.textContent = buttonText;
+      overlay.hidden = false;
+    }
+    function hideOverlay() { overlay.hidden = true; }
+
+    function startGame() {
+      state = State.Playing;
+      world.t = 0; world.score = 0; world.foes.length = 0; world.stars.length = 0;
+      world.spawnFoeTimer = 0; world.spawnStarTimer = 0; world.player.invuln = 0;
+      world.player.x = canvas.width * 0.5; world.player.y = canvas.height * 0.7;
+      world.player.vx = 0; world.player.vy = 0;
+      hideOverlay();
+      beep(880, 0.08); setTimeout(()=>beep(1100,0.08), 60);
+    }
+
+    function gameOver() {
+      state = State.GameOver;
+      world.best = Math.max(world.best, Math.floor(world.score));
+      showOverlay('Game Over', `Score ${Math.floor(world.score)} • Best ${world.best}`, 'Play Again');
+      beep(160, 0.08); setTimeout(()=>beep(120,0.1), 90);
+    }
+
+    // RNG
+    function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296 }}
+
+    // Input: virtual joystick
+    const input = { active:false, id:null, ox:0, oy:0, dx:0, dy:0 };
+
+    function showStick(x, y) {
+      const rBase = 84, rKnob = 44; // CSS pixels
+      stickBase.style.width = stickBase.style.height = rBase + 'px';
+      stickKnob.style.width = stickKnob.style.height = rKnob + 'px';
+      stickBase.style.left = (x - rBase/2) + 'px';
+      stickBase.style.top  = (y - rBase/2) + 'px';
+      stickKnob.style.left = (x - rKnob/2) + 'px';
+      stickKnob.style.top  = (y - rKnob/2) + 'px';
+      stickBase.style.opacity = '1';
+      stickKnob.style.opacity = '1';
+    }
+    function moveStick(x, y) {
+      const max = 48; // max offset
+      const dx = x - input.ox, dy = y - input.oy;
+      const d = Math.hypot(dx, dy) || 1;
+      const clamped = Math.min(d, max);
+      const nx = dx / d, ny = dy / d;
+      const kx = input.ox + nx * clamped, ky = input.oy + ny * clamped;
+      input.dx = (dx / max); input.dy = (dy / max);
+      stickKnob.style.left = (kx - 22) + 'px';
+      stickKnob.style.top  = (ky - 22) + 'px';
+    }
+    function hideStick() { stickBase.style.opacity = stickKnob.style.opacity = '0'; }
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (state !== State.Playing) return;
+      const t = e.changedTouches[0];
+      input.active = true; input.id = t.identifier; input.ox = t.clientX; input.oy = t.clientY; input.dx=0; input.dy=0;
+      showStick(t.clientX, t.clientY);
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!input.active) return;
+      for (const t of e.changedTouches) if (t.identifier === input.id) moveStick(t.clientX, t.clientY);
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      for (const t of e.changedTouches) if (t.identifier === input.id) {
+        input.active = false; input.id = null; input.dx = input.dy = 0; hideStick();
+      }
+    }, { passive: true });
+
+    // Mouse fallback
+    let mouseDown = false;
+    canvas.addEventListener('mousedown', (e) => {
+      if (state !== State.Playing) return;
+      mouseDown = true; input.active = true; input.ox = e.clientX; input.oy = e.clientY; showStick(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => { if (mouseDown) moveStick(e.clientX, e.clientY); });
+    window.addEventListener('mouseup',   () => { mouseDown=false; input.active=false; input.dx=input.dy=0; hideStick(); });
+
+    // Helpers
+    function clamp(v,min,max){return v<min?min:v>max?max:v}
+    function circleHit(ax, ay, ar, bx, by, br){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy <= (ar+br)*(ar+br); }
+
+    // Spawning
+    function spawnFoe() {
+      const speed = 90 + world.score * 2.2; // scales with time
+      const size = 10 + world.rng()*14;
+      const side = Math.floor(world.rng()*4);
+      let x,y,vx,vy;
+      const w = canvas.width, h = canvas.height;
+      if (side===0){ x= -20; y= h*world.rng(); vx= speed; vy= (world.rng()-0.5)*speed*0.5; }
+      else if (side===1){ x= w+20; y= h*world.rng(); vx= -speed; vy= (world.rng()-0.5)*speed*0.5; }
+      else if (side===2){ x= w*world.rng(); y= -20; vx= (world.rng()-0.5)*speed*0.5; vy= speed; }
+      else { x= w*world.rng(); y= h+20; vx= (world.rng()-0.5)*speed*0.5; vy= -speed; }
+      world.foes.push({x,y,vx,vy,r:size});
+    }
+    function spawnStar() {
+      const margin = 40 * DPR;
+      const x = margin + world.rng()*(canvas.width - 2*margin);
+      const y = margin + world.rng()*(canvas.height - 2*margin);
+      world.stars.push({x,y,r:10, t:0});
+    }
+
+    // Game loop
+    let last = performance.now();
+    function loop(now){
+      requestAnimationFrame(loop);
+      const dt = Math.min(0.033, (now - last)/1000); last = now;
+
+      // Draw background
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawGrid();
+
+      if (state === State.Playing) update(dt);
+      render();
+    }
+
+    function update(dt){
+      world.t += dt; world.score += dt * 10;
+      scorePill.textContent = `Score ${Math.floor(world.score)}`;
+
+      // Player movement
+      const p = world.player;
+      const speed = p.speed * DPR;
+      // Smooth target velocity from stick
+      const ax = input.dx, ay = input.dy; // -1..1
+      const mag = Math.hypot(ax, ay);
+      const maxMag = Math.min(1, mag);
+      const targetVx = (ax / (mag||1)) * maxMag * speed;
+      const targetVy = (ay / (mag||1)) * maxMag * speed;
+      p.vx += (targetVx - p.vx) * 0.2;
+      p.vy += (targetVy - p.vy) * 0.2;
+      p.x = clamp(p.x + p.vx*dt, p.r, canvas.width - p.r);
+      p.y = clamp(p.y + p.vy*dt, p.r, canvas.height - p.r);
+      if (p.invuln > 0) p.invuln -= dt;
+
+      // Spawns scale with time
+      world.spawnFoeTimer -= dt; if (world.spawnFoeTimer <= 0) {
+        world.spawnFoeTimer = Math.max(0.15, 0.7 - world.score * 0.005);
+        spawnFoe();
+      }
+      world.spawnStarTimer -= dt; if (world.spawnStarTimer <= 0) {
+        world.spawnStarTimer = 2.6 - Math.min(2.0, world.score * 0.01);
+        spawnStar();
+      }
+
+      // Update foes
+      for (let i=world.foes.length-1;i>=0;i--) {
+        const f = world.foes[i];
+        f.x += f.vx*dt; f.y += f.vy*dt;
+        if (f.x < -60 || f.x > canvas.width+60 || f.y < -60 || f.y > canvas.height+60) world.foes.splice(i,1);
+      }
+
+      // Stars pulse
+      for (const s of world.stars) s.t += dt;
+
+      // Collisions
+      for (let i=world.stars.length-1;i>=0;i--) {
+        const s = world.stars[i];
+        if (circleHit(p.x,p.y,p.r, s.x,s.y,s.r)) {
+          world.stars.splice(i,1); world.score += 25; beep(1200, 0.05);
+          p.invuln = Math.max(0, p.invuln); // no extra effect, placeholder for power-ups
+        }
+      }
+      if (p.invuln <= 0) {
+        for (const f of world.foes) {
+          if (circleHit(p.x,p.y,p.r, f.x,f.y,f.r)) { gameOver(); break; }
+        }
+      }
+    }
+
+    function render(){
+      const p = world.player;
+
+      // Stars
+      for (const s of world.stars) {
+        const pulse = 1 + Math.sin(s.t*6)*0.15;
+        drawStar(s.x, s.y, s.r*pulse, 5, 0.5, '#ffd76a', '#ffefb0');
+      }
+
+      // Foes
+      for (const f of world.foes) {
+        drawGlowCircle(f.x, f.y, f.r, '#ff3b3b');
+      }
+
+      // Player
+      drawGlowCircle(p.x, p.y, p.r, p.invuln>0 ? '#66d9ff' : '#6afc9e');
+
+      if (state !== State.Playing) {
+        // Freeze blur overlay when paused or start
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+      }
+    }
+
+    function drawGrid(){
+      const w = canvas.width, h = canvas.height;
+      // Subtle parallax grid
+      ctx.fillStyle = '#0b0f14';
+      ctx.fillRect(0,0,w,h);
+      const t = world.t;
+      const step = 48 * DPR;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = (t*20)%step; x < w; x += step) { ctx.moveTo(x,0); ctx.lineTo(x,h); }
+      for (let y = (t*28)%step; y < h; y += step) { ctx.moveTo(0,y); ctx.lineTo(w,y); }
+      ctx.stroke();
+    }
+
+    function drawGlowCircle(x,y,r, color){
+      // Outer glow
+      const g = ctx.createRadialGradient(x,y, r*0.3, x,y, r*1.8);
+      g.addColorStop(0, hexToRgba(color, 0.25));
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,r*1.8,0,Math.PI*2); ctx.fill();
+      // Core
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    }
+
+    function drawStar(cx, cy, spikes, outerRadius, innerRatio, core, rim){
+      // Overload arguments for convenience: drawStar(x, y, r, spikes, innerRatio, coreColor, rimColor)
+      const r = spikes; spikes = outerRadius; outerRadius = r; // accommodate previous call style
+      const innerRadius = outerRadius * (innerRatio || 0.5);
+      let rot = Math.PI / 2 * 3;
+      let x = cx, y = cy;
+      const step = Math.PI / spikes;
+      const grd = ctx.createRadialGradient(cx,cy, innerRadius*0.2, cx,cy, outerRadius*1.2);
+      grd.addColorStop(0, core || '#fff');
+      grd.addColorStop(1, rim || '#ffa');
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - outerRadius);
+      for (let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+      }
+      ctx.lineTo(cx, cy - outerRadius);
+      ctx.closePath();
+      ctx.fillStyle = grd; ctx.fill();
+    }
+
+    function hexToRgba(hex, a){
+      // supports #rrggbb
+      const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // Start screen
+    showOverlay('Pocket Dodge', 'Drag to move. Avoid red. Collect stars. Survive to score.');
+
+    // Kick off loop
+    requestAnimationFrame(loop);
+
+    // Prevent iOS rubber band on canvas drag
+    document.body.addEventListener('touchmove', (e)=>{ if (e.target === canvas) e.preventDefault(); }, { passive: false });
+  })();
+  </script>
+</body>
+</html>
