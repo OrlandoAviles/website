@@ -69,6 +69,15 @@
     return map;
   }
 
+  // ✅ NEW: random wall color per scene load (all walls share this one color)
+  function randomWallColor(){
+    // Muted + dungeon-friendly HSL range
+    const hue = Math.random();                 // 0..1
+    const sat = 0.35 + Math.random()*0.3;      // 0.35..0.65
+    const light = 0.25 + Math.random()*0.2;    // 0.25..0.45
+    return new THREE.Color().setHSL(hue, sat, light);
+  }
+
   const canvasParent = document.getElementById('app');
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x070709);
@@ -102,7 +111,8 @@
   const walls = new THREE.Group();
   scene.add(walls);
 
-  const wallMat = new THREE.MeshStandardMaterial({color:0x6b4b3b, roughness:0.85, metalness:0.05});
+  // ✅ CHANGED: wall color now random each load (everything else unchanged)
+  const wallMat = new THREE.MeshStandardMaterial({color: randomWallColor(), roughness:0.85, metalness:0.05});
   const wallGeo = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE*2, CELL_SIZE);
 
   const map = generateMap(MAP_W, MAP_H);
