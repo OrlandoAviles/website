@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>List</title>
+  <title>Lists</title>
+
   <style>
     body {
       font-family: sans-serif;
@@ -11,6 +12,7 @@
       color: white;
       min-height: 100vh;
     }
+
     input[type="text"] {
       width: 80%;
       padding: 8px;
@@ -18,6 +20,7 @@
       border-radius: 4px;
       margin-top: 10px;
     }
+
     button {
       padding: 8px 12px;
       margin-top: 10px;
@@ -27,13 +30,16 @@
       color: white;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #2980b9;
     }
+
     ul {
       list-style: none;
       padding: 0;
     }
+
     li {
       margin: 8px 0;
       padding: 8px;
@@ -41,50 +47,221 @@
       border-radius: 4px;
       cursor: pointer;
       transition: background 0.3s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
     li:hover {
       background: rgba(255, 255, 255, 0.2);
     }
-  </style>
-</head>
-<body>
-  <h1>My List</h1>
-  <input type="text" id="listItemInput" placeholder="Add a new item...">
-  <button onclick="addListItem()">Add Item</button>
-  <ul id="list"></ul>
 
-  <script>
-    function addListItem() {
-      const itemInput = document.getElementById('listItemInput');
-      const itemText = itemInput.value.trim();
-      if (itemText === '') return;
-      const list = JSON.parse(localStorage.getItem('myList') || '[]');
-      list.push(itemText);
-      localStorage.setItem('myList', JSON.stringify(list));
-      itemInput.value = '';
-      loadList();
+    /* Floating menu button */
+    #listMenuBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      font-size: 22px;
+      z-index: 1000;
     }
 
+    /* Saved lists menu */
+    #listMenu {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 220px;
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+    }
+
+    #savedLists li {
+      background: none;
+      padding: 6px;
+    }
+
+    .list-name {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .delete-list {
+      background: transparent;
+      border: none;
+      color: #ff6b6b;
+      font-size: 16px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1 id="listTitle">Default</h1>
+
+  <input type="text" id="listItemInput" placeholder="Add a new item...">
+  <button onclick="addListItem()">Add Item</button>
+
+  <ul id="list"></ul>
+
+  <!-- Floating menu -->
+  <button id="listMenuBtn">☰</button>
+
+  <div id="listMenu">
+    <input type="text" id="newListName" placeholder="New list name..." />
+    <button onclick="createNewList()">Create</button>
+    <ul id="savedLists"></ul>
+  </div>
+
+  <script>
+    /* ------------------------
+       State & Storage Helpers
+    ------------------------ */
+
+    let currentList = localStorage.getItem('currentList') || 'Default';
+
+    function getLists() {
+      return JSON.parse(localStorage.getItem('lists') || '{}');
+    }
+
+    function saveLists(lists) {
+      localStorage.setItem('lists', JSON.stringify(lists));
+    }
+
+    /* ------------------------
+       Core Renderer
+    ------------------------ */
+
     function loadList() {
-      const listUl = document.getElementById('list');
-      listUl.innerHTML = '';
-      const list = JSON.parse(localStorage.getItem('myList') || '[]');
-      list.forEach((item, index) => {
+      const ul = document.getElementById('list');
+      ul.innerHTML = '';
+
+      const lists = getLists();
+      const items = lists[currentList] || [];
+
+      items.forEach((item, index) => {
         const li = document.createElement('li');
         li.textContent = item;
         li.onclick = () => removeListItem(index);
-        listUl.appendChild(li);
+        ul.appendChild(li);
       });
+
+      document.getElementById('listTitle').textContent = currentList;
+      loadSavedLists();
     }
 
-    function removeListItem(index) {
-      const list = JSON.parse(localStorage.getItem('myList') || '[]');
-      list.splice(index, 1);
-      localStorage.setItem('myList', JSON.stringify(list));
+    /* ------------------------
+       Item Actions
+    ------------------------ */
+
+    function addListItem() {
+      const input = document.getElementById('listItemInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const lists = getLists();
+      lists[currentList] = lists[currentList] || [];
+      lists[currentList].push(text);
+      saveLists(lists);
+
+      input.value = '';
       loadList();
     }
 
+    function removeListItem(index) {
+      const lists = getLists();
+      lists[currentList].splice(index, 1);
+      saveLists(lists);
+      loadList();
+    }
+
+    /* ------------------------
+       List Actions
+    ------------------------ */
+
+    function createNewList() {
+      const input = document.getElementById('newListName');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const lists = getLists();
+      if (!lists[name]) lists[name] = [];
+
+      saveLists(lists);
+      switchList(name);
+      input.value = '';
+    }
+
+    function switchList(name) {
+      currentList = name;
+      localStorage.setItem('currentList', name);
+      loadList();
+    }
+
+    function deleteList(name) {
+      const lists = getLists();
+      delete lists[name];
+      saveLists(lists);
+
+      if (currentList === name) {
+        const remaining = Object.keys(lists);
+        currentList = remaining[0] || 'Default';
+        localStorage.setItem('currentList', currentList);
+      }
+
+      loadList();
+    }
+
+    function loadSavedLists() {
+      const ul = document.getElementById('savedLists');
+      ul.innerHTML = '';
+
+      const lists = getLists();
+
+      Object.keys(lists).forEach(name => {
+        const li = document.createElement('li');
+
+        const span = document.createElement('span');
+        span.textContent = name;
+        span.className = 'list-name';
+        span.onclick = () => switchList(name);
+
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        del.className = 'delete-list';
+        del.onclick = (e) => {
+          e.stopPropagation();
+          deleteList(name);
+        };
+
+        li.appendChild(span);
+        li.appendChild(del);
+        ul.appendChild(li);
+      });
+    }
+
+    /* ------------------------
+       Menu Toggle
+    ------------------------ */
+
+    document.getElementById('listMenuBtn').onclick = () => {
+      const menu = document.getElementById('listMenu');
+      const isHidden = getComputedStyle(menu).display === 'none';
+      menu.style.display = isHidden ? 'block' : 'none';
+    };
+
+    /* ------------------------
+       Startup
+    ------------------------ */
+
     loadList();
   </script>
+
 </body>
 </html>
