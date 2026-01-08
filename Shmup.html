@@ -1,396 +1,654 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Shmup Maker - Play & Edit</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile Shmup (Canvas)</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      font-family: sans-serif;
-      background: #222;
-      color: white;
-      overflow: hidden;
-    }
-    #topbar {
-      display: flex;
-      background: #333;
-      padding: 8px;
-    }
-    #topbar button {
-      margin-right: 10px;
-      padding: 6px 12px;
-      background: #555;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-    }
-    #workspace {
-      width: 100%;
-      height: calc(100vh - 40px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: black;
-    }
-    .mode {
-      display: none;
-      width: 100%;
       height: 100%;
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
+      background: #07080c;
+      overflow: hidden;
+      touch-action: none; /* important for mobile drag */
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: #e9eefc;
+    }
+    #wrap {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
     }
     canvas {
-      border: 2px solid #000;
-    }
-    .toolbar {
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .toolbar input, .toolbar button, .toolbar select {
-      margin-right: 5px;
-    }
-    #editorCanvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
       image-rendering: pixelated;
-      width: 512px;  /* scaled up for drawing comfort */
-      height: 512px;
-      background: repeating-conic-gradient(#ccc 0% 25%, #eee 0% 50%) 50% / 32px 32px;
+    }
+    #hud {
+      position: fixed;
+      left: 12px;
+      top: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: none;
+    }
+    .pill {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: 6px 10px;
+      backdrop-filter: blur(6px);
+    }
+    #buttons {
+      position: fixed;
+      right: 12px;
+      top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: #e9eefc;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.98); }
+    #overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(ellipse at center, rgba(20,30,60,0.58), rgba(0,0,0,0.78));
+      text-align: center;
+      padding: 24px;
+    }
+    #panel {
+      max-width: 520px;
+      width: min(520px, 92vw);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      backdrop-filter: blur(10px);
+    }
+    #panel h1 { margin: 0 0 8px; font-size: 22px; }
+    #panel p { margin: 6px 0; opacity: 0.9; line-height: 1.35; }
+    #panel .row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    #panel .hint { font-size: 13px; opacity: 0.8; margin-top: 10px; }
+    #panel kbd {
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.10);
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-weight: 800;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <div id="topbar">
-    <button onclick="setMode('play')">Play</button>
-    <button onclick="setMode('edit')">Edit</button>
-    <button id="pauseBtn" onclick="togglePause()">Pause</button>
+  <div id="wrap">
+    <canvas id="c"></canvas>
   </div>
 
-  <div id="workspace">
-    <!-- Play Mode -->
-    <div id="playMode" class="mode">
-      <canvas id="gameCanvas"></canvas>
-    </div>
+  <div id="hud">
+    <div class="pill">Score: <span id="score">0</span></div>
+    <div class="pill">Lives: <span id="lives">3</span></div>
+    <div class="pill">Wave: <span id="wave">1</span></div>
+  </div>
 
-    <!-- Edit Mode -->
-    <div id="editMode" class="mode">
-      <div class="toolbar">
-        <label>Target Sprite:
-          <select id="spriteSelect" onchange="loadSpriteToEditor()">
-            <option value="player">Player</option>
-            <option value="bullet">Bullet</option>
-            <option value="enemy">Enemy</option>
-            <option value="background">Background</option>
-          </select>
-        </label>
-        <label>Color: <input type="color" id="colorPicker" value="#000000"></label>
-        <label>Brush Size: <input type="range" id="brushSize" min="1" max="50" value="5"></label>
-        <button onclick="saveSprite()">Save</button>
-        <button onclick="clearEditor()">Clear</button>
-        <button onclick="setTool('brush')">Brush</button>
-        <button onclick="setTool('eraser')">Eraser</button>
-        <button onclick="setTool('bucket')">Paint Bucket</button>
-        <button onclick="setTool('line')">Line</button>
+  <div id="buttons">
+    <button id="pauseBtn" type="button">Pause</button>
+    <button id="restartBtn" type="button">Restart</button>
+  </div>
+
+  <div id="overlay">
+    <div id="panel">
+      <h1>📱 Mobile Shmup</h1>
+      <p><b>Touch:</b> drag anywhere to move. Tap/hold to shoot.</p>
+      <p><b>Desktop:</b> <kbd>WASD</kbd>/<kbd>Arrow</kbd> to move, <kbd>Space</kbd> to shoot, <kbd>P</kbd> to pause.</p>
+      <p class="hint">Tip: you have a tiny “graze bubble” (for forgiving hits). Keep your ship near the bottom and dance.</p>
+      <div class="row">
+        <button id="startBtn" type="button">Start</button>
       </div>
-      <canvas id="editorCanvas" width="128" height="128"></canvas>
     </div>
   </div>
 
-  <script>
-    let mode = "play";
-    let paused = false;
+<script>
+(() => {
+  // ===== Canvas + Resize =====
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
 
-    function setMode(m) {
-      document.querySelectorAll(".mode").forEach(el => el.style.display = "none");
-      document.getElementById(m + "Mode").style.display = "flex";
-      mode = m;
-    }
-    setMode("play");
+  let W = 0, H = 0, DPR = 1;
 
-    function togglePause() {
-      paused = !paused;
-      const pauseBtn = document.getElementById("pauseBtn");
-      pauseBtn.textContent = paused ? "Resume" : "Pause";
-      if (paused) {
-        lastSpawnTime = null; // freeze spawn timer
-      }
-    }
+  function resize() {
+    DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener("resize", resize, { passive: true });
+  resize();
 
-    // --- SHMUP GAME ---
-    const gameCanvas = document.getElementById("gameCanvas");
-    const gctx = gameCanvas.getContext("2d");
-    gameCanvas.width = window.innerWidth;
-    gameCanvas.height = window.innerHeight - 40;
+  // ===== UI =====
+  const scoreEl = document.getElementById("score");
+  const livesEl = document.getElementById("lives");
+  const waveEl  = document.getElementById("wave");
+  const overlay = document.getElementById("overlay");
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const restartBtn = document.getElementById("restartBtn");
 
-    let sprites = {
-      player: null,
-      bullet: null,
-      enemy: null,
-      background: null
-    };
+  // ===== Helpers =====
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
 
-    // Defaults (colored blocks)
-    function createDefaultSprite(color) {
-      const c = document.createElement("canvas");
-      c.width = 128; c.height = 128;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, 128, 128);
-      let img = new Image();
-      img.src = c.toDataURL();
-      return img;
-    }
+  function circleHit(ax, ay, ar, bx, by, br) {
+    const dx = ax - bx, dy = ay - by;
+    return (dx*dx + dy*dy) <= (ar + br) * (ar + br);
+  }
 
-    sprites.player = createDefaultSprite("cyan");
-    sprites.enemy = createDefaultSprite("red");
-    sprites.bullet = createDefaultSprite("yellow");
-    sprites.background = createDefaultSprite("black");
+  // ===== Game State =====
+  let running = false;
+  let paused = false;
+  let gameOver = false;
 
-    let player = { x: gameCanvas.width/2, y: gameCanvas.height - 100, w: 40, h: 40, bullets: [] };
-    let enemies = [];
-    let score = 0;
-    let lastShot = 0;
-    let lastSpawnTime = null;
-    const spawnInterval = 1000; // ms
+  const keys = new Set();
+  let shootHeld = false;
 
-    let keys = {};
-    let touchStartX = null, touchStartY = null;
-    let playerStartX = null, playerStartY = null;
-    let pendingDx = 0, pendingDy = 0;
+  let score = 0;
+  let lives = 3;
+  let wave = 1;
 
-    document.addEventListener("keydown", e => { keys[e.code] = true; });
-    document.addEventListener("keyup", e => { keys[e.code] = false; });
+  // Difficulty knobs
+  let enemyRate = 0.85;        // spawn chance per tick (scaled in spawner)
+  let enemySpeedBase = 110;    // px/s
+  let bulletSpeed = 720;       // px/s
+  let fireCooldown = 0.11;     // seconds between shots
 
-    gameCanvas.addEventListener("touchstart", e => {
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      playerStartX = player.x;
-      playerStartY = player.y;
-      pendingDx = 0;
-      pendingDy = 0;
-    });
+  // Entities
+  const bullets = [];
+  const enemies = [];
+  const stars = [];
 
-    gameCanvas.addEventListener("touchmove", e => {
-      const touch = e.touches[0];
-      pendingDx = touch.clientX - touchStartX;
-      pendingDy = touch.clientY - touchStartY;
-    });
+  // ===== Player =====
+  const player = {
+    x: 0, y: 0,
+    r: 14,
+    speed: 420, // px/s
+    invuln: 0,  // seconds
+    fireTimer: 0
+  };
 
-    gameCanvas.addEventListener("touchend", () => {
-      touchStartX = null;
-      touchStartY = null;
-      pendingDx = 0;
-      pendingDy = 0;
-    });
+  function reset() {
+    score = 0;
+    lives = 3;
+    wave = 1;
 
-    function spawnEnemy() {
-      enemies.push({
-        x: Math.random() * (gameCanvas.width - 40),
-        y: -40,
-        w: 40,
-        h: 40,
-        speed: 2 + Math.random() * 2,
-        alive: true
+    enemyRate = 0.85;
+    enemySpeedBase = 110;
+    bulletSpeed = 720;
+    fireCooldown = 0.11;
+
+    bullets.length = 0;
+    enemies.length = 0;
+    stars.length = 0;
+
+    player.x = W * 0.5;
+    player.y = H * 0.82;
+    player.invuln = 1.0;
+    player.fireTimer = 0;
+
+    for (let i = 0; i < 140; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: rand(0.6, 2.2),
+        v: rand(30, 140)
       });
     }
 
-    function updateGame() {
-      const now = Date.now();
+    gameOver = false;
+    updateHud();
+  }
 
-      if (!lastSpawnTime) lastSpawnTime = now;
-      if (now - lastSpawnTime > spawnInterval) {
-        spawnEnemy();
-        lastSpawnTime = now;
+  function updateHud() {
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+    waveEl.textContent = wave;
+  }
+
+  // ===== Spawning =====
+  let spawnTimer = 0;
+
+  function spawnEnemy() {
+    const type = Math.random() < 0.18 ? "tank" : "drifter";
+    const r = type === "tank" ? 18 : 14;
+    const hp = type === "tank" ? 4 : 1;
+
+    enemies.push({
+      x: rand(20, W - 20),
+      y: -30,
+      r,
+      hp,
+      type,
+      // movement
+      vy: enemySpeedBase * (type === "tank" ? 0.75 : 1.0) + rand(-12, 30),
+      vx: (type === "drifter" ? rand(-70, 70) : rand(-30, 30)),
+      wob: rand(1.2, 2.2),
+      t: rand(0, 10)
+    });
+  }
+
+  function maybeAdvanceWave() {
+    // Every N points, ramp. (Simple + effective)
+    const targetWave = 1 + Math.floor(score / 250);
+    if (targetWave > wave) {
+      wave = targetWave;
+      enemySpeedBase = 110 + (wave - 1) * 18;
+      enemyRate = 0.85 + (wave - 1) * 0.12;
+      fireCooldown = Math.max(0.07, 0.11 - (wave - 1) * 0.004); // slightly faster with progress
+      updateHud();
+    }
+  }
+
+  // ===== Input (Touch) =====
+  let touchActive = false;
+  let touchId = null;
+  let touchOffsetX = 0;
+  let touchOffsetY = 0;
+
+  function getTouchById(touches, id) {
+    for (let i = 0; i < touches.length; i++) if (touches[i].identifier === id) return touches[i];
+    return null;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    touchActive = true;
+    touchId = e.pointerId;
+
+    // Start shooting immediately on press, and also allow aiming by drag
+    shootHeld = true;
+
+    // Smooth drag: keep the relative grab offset so the ship doesn't "teleport"
+    const px = e.clientX;
+    const py = e.clientY;
+    touchOffsetX = player.x - px;
+    touchOffsetY = player.y - py;
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!touchActive || e.pointerId !== touchId) return;
+    const px = e.clientX;
+    const py = e.clientY;
+    player.x = clamp(px + touchOffsetX, 20, W - 20);
+    player.y = clamp(py + touchOffsetY, 20, H - 20);
+  });
+
+  function endPointer(e) {
+    if (e.pointerId !== touchId) return;
+    touchActive = false;
+    touchId = null;
+    shootHeld = false;
+  }
+
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("pointerleave", endPointer);
+
+  // ===== Input (Keyboard) =====
+  window.addEventListener("keydown", (e) => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    keys.add(e.key.toLowerCase());
+    if (e.key === " " || e.code === "Space") shootHeld = true;
+    if (e.key.toLowerCase() === "p") togglePause();
+  }, { passive: false });
+
+  window.addEventListener("keyup", (e) => {
+    keys.delete(e.key.toLowerCase());
+    if (e.key === " " || e.code === "Space") shootHeld = false;
+  }, { passive: true });
+
+  // ===== Buttons =====
+  startBtn.addEventListener("click", () => {
+    overlay.style.display = "none";
+    running = true;
+    paused = false;
+  });
+
+  pauseBtn.addEventListener("click", () => togglePause());
+  restartBtn.addEventListener("click", () => {
+    reset();
+    overlay.style.display = "none";
+    running = true;
+    paused = false;
+  });
+
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+  }
+
+  // ===== Game Loop =====
+  let last = performance.now();
+
+  function tick(now) {
+    const dt = Math.min(0.033, (now - last) / 1000); // cap delta for stability
+    last = now;
+
+    if (running && !paused) {
+      update(dt);
+      render(dt);
+    } else {
+      render(dt); // still draw pretty background even when paused
+      if (paused) drawPaused();
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ===== Update =====
+  function update(dt) {
+    if (gameOver) return;
+
+    // Player movement (keyboard only; touch directly sets)
+    let mx = 0, my = 0;
+    if (keys.has("arrowleft") || keys.has("a")) mx -= 1;
+    if (keys.has("arrowright") || keys.has("d")) mx += 1;
+    if (keys.has("arrowup") || keys.has("w")) my -= 1;
+    if (keys.has("arrowdown") || keys.has("s")) my += 1;
+
+    if (!touchActive) {
+      const len = Math.hypot(mx, my) || 1;
+      mx /= len; my /= len;
+      player.x = clamp(player.x + mx * player.speed * dt, 20, W - 20);
+      player.y = clamp(player.y + my * player.speed * dt, 20, H - 20);
+    }
+
+    // Shooting
+    player.fireTimer -= dt;
+    if (shootHeld && player.fireTimer <= 0) {
+      player.fireTimer = fireCooldown;
+      fire();
+    }
+
+    // Stars
+    for (const st of stars) {
+      st.y += st.v * dt;
+      if (st.y > H + 10) {
+        st.y = -10;
+        st.x = Math.random() * W;
+        st.v = rand(30, 150) + wave * 4;
+        st.s = rand(0.6, 2.2);
       }
+    }
 
-      if (touchStartX !== null && touchStartY !== null) {
-        player.x = playerStartX + pendingDx;
-        player.y = playerStartY + pendingDy;
-      }
+    // Spawn enemies
+    spawnTimer += dt;
+    // Convert enemyRate to a spawn probability that feels stable across frame rates
+    const spawnsPerSecond = 1.4 + (wave - 1) * 0.28;
+    while (spawnTimer >= 1 / 60) {
+      spawnTimer -= 1 / 60;
+      // Per-tick probability derived from desired rate
+      const p = clamp((spawnsPerSecond / 60) * (enemyRate / 1.0), 0, 0.25);
+      if (Math.random() < p) spawnEnemy();
+    }
 
-      if (keys["ArrowLeft"]) player.x -= 6;
-      if (keys["ArrowRight"]) player.x += 6;
-      if (keys["ArrowUp"]) player.y -= 6;
-      if (keys["ArrowDown"]) player.y += 6;
+    // Bullets
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.y -= b.v * dt;
+      if (b.y < -30) bullets.splice(i, 1);
+    }
 
-      player.x = Math.max(0, Math.min(gameCanvas.width - player.w, player.x));
-      player.y = Math.max(0, Math.min(gameCanvas.height - player.h, player.y));
+    // Enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      e.t += dt;
+      e.y += e.vy * dt;
+      e.x += (e.vx + Math.sin(e.t * e.wob) * 22) * dt;
 
-      if (Date.now() - lastShot > 200) {
-        player.bullets.push({x: player.x + player.w/2 - 4, y: player.y, w: 8, h: 16});
-        lastShot = Date.now();
-      }
+      // bounce slightly in bounds
+      if (e.x < 16) { e.x = 16; e.vx = Math.abs(e.vx); }
+      if (e.x > W - 16) { e.x = W - 16; e.vx = -Math.abs(e.vx); }
 
-      for (let b of player.bullets) b.y -= 8;
-      player.bullets = player.bullets.filter(b => b.y > -20);
+      if (e.y > H + 60) enemies.splice(i, 1);
+    }
 
-      for (let e of enemies) e.y += e.speed;
-      enemies = enemies.filter(e => e.y < gameCanvas.height + 50 && e.alive);
+    // Collisions: bullets vs enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      for (let j = bullets.length - 1; j >= 0; j--) {
+        const b = bullets[j];
+        if (circleHit(e.x, e.y, e.r, b.x, b.y, b.r)) {
+          bullets.splice(j, 1);
+          e.hp -= 1;
+          score += (e.type === "tank" ? 8 : 4);
 
-      for (let b of player.bullets) {
-        for (let e of enemies) {
-          if (e.alive && b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
-            e.alive = false;
-            b.y = -100;
-            score += 100;
+          if (e.hp <= 0) {
+            score += (e.type === "tank" ? 35 : 18);
+            enemies.splice(i, 1);
           }
+          break;
         }
       }
     }
 
-    function drawGame() {
-      gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
-      if (sprites.background) gctx.drawImage(sprites.background, 0, 0, gameCanvas.width, gameCanvas.height);
-      if (sprites.player) gctx.drawImage(sprites.player, player.x, player.y, player.w, player.h);
-      if (sprites.bullet) for (let b of player.bullets) gctx.drawImage(sprites.bullet, b.x, b.y, b.w, b.h);
-      if (sprites.enemy) for (let e of enemies) if (e.alive) gctx.drawImage(sprites.enemy, e.x, e.y, e.w, e.h);
-      gctx.fillStyle = "white"; gctx.font = "20px sans-serif"; gctx.fillText("Score: " + score, 10, 30);
-      if (paused) {
-        gctx.fillStyle = "rgba(0,0,0,0.5)";
-        gctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
-        gctx.fillStyle = "white";
-        gctx.font = "40px sans-serif";
-        gctx.fillText("Paused", gameCanvas.width/2 - 60, gameCanvas.height/2);
+    // Collisions: enemies vs player (with invuln & "graze bubble")
+    player.invuln = Math.max(0, player.invuln - dt);
+    const hitRadius = player.r * 0.78; // forgiving hitbox
+    if (player.invuln <= 0) {
+      for (const e of enemies) {
+        if (circleHit(e.x, e.y, e.r * 0.9, player.x, player.y, hitRadius)) {
+          lives -= 1;
+          player.invuln = 1.2;
+          // small knock
+          player.y = clamp(player.y + 18, 20, H - 20);
+          updateHud();
+          if (lives <= 0) {
+            gameOver = true;
+            running = true;
+            paused = false;
+            pauseBtn.textContent = "Pause";
+            showGameOver();
+          }
+          break;
+        }
       }
     }
 
-    function gameLoop() {
-      if (mode === "play") {
-        if (!paused) updateGame();
-        drawGame();
+    maybeAdvanceWave();
+    updateHud();
+  }
+
+  function fire() {
+    // basic double-shot that tightens with wave a bit
+    const spread = Math.max(6, 14 - wave * 0.6);
+    bullets.push({ x: player.x - spread, y: player.y - 18, r: 4, v: bulletSpeed });
+    bullets.push({ x: player.x + spread, y: player.y - 18, r: 4, v: bulletSpeed });
+  }
+
+  // ===== Render =====
+  function render(dt) {
+    // background
+    ctx.fillStyle = "#07080c";
+    ctx.fillRect(0, 0, W, H);
+
+    // stars
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    for (const st of stars) {
+      ctx.fillStyle = "rgba(225,240,255,0.75)";
+      ctx.fillRect(st.x, st.y, st.s, st.s);
+    }
+    ctx.restore();
+
+    // subtle horizon glow
+    const g = ctx.createLinearGradient(0, H, 0, 0);
+    g.addColorStop(0, "rgba(60,120,255,0.12)");
+    g.addColorStop(0.6, "rgba(60,120,255,0.00)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // enemies
+    for (const e of enemies) drawEnemy(e);
+
+    // bullets
+    for (const b of bullets) {
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(160,255,210,0.95)";
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // player
+    drawPlayer();
+
+    // game over text on canvas (overlay handles main panel)
+    if (gameOver) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.font = "800 26px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("GAME OVER", W/2, H*0.42);
+      ctx.font = "700 16px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.fillText("Tap Restart (top right) or refresh", W/2, H*0.48);
+      ctx.restore();
+    }
+  }
+
+  function drawPlayer() {
+    const p = player;
+    // ship body
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    // invuln blink
+    if (p.invuln > 0) ctx.globalAlpha = 0.45 + 0.35 * Math.sin(performance.now() * 0.02);
+
+    // thruster glow
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(120,200,255,0.28)";
+    ctx.ellipse(0, 16, 10, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ship triangle
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(210,225,255,0.92)";
+    ctx.moveTo(0, -18);
+    ctx.lineTo(14, 18);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-14, 18);
+    ctx.closePath();
+    ctx.fill();
+
+    // cockpit
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(110,255,210,0.85)";
+    ctx.arc(0, -3, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // hitbox dot
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,120,160,0.95)";
+    ctx.arc(0, 2, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+
+    if (e.type === "tank") {
+      // chunky diamond
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255,170,90,0.95)";
+      ctx.moveTo(0, -18);
+      ctx.lineTo(18, 0);
+      ctx.lineTo(0, 18);
+      ctx.lineTo(-18, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // core
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // hp pips
+      for (let i = 0; i < e.hp; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.arc(-12 + i*8, -24, 2.2, 0, Math.PI*2);
+        ctx.fill();
       }
-      requestAnimationFrame(gameLoop);
-    }
-    gameLoop();
+    } else {
+      // drifter: spiky disk
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255,90,120,0.95)";
+      ctx.arc(0, 0, 14, 0, Math.PI*2);
+      ctx.fill();
 
-    // --- EDITOR ---
-    const editorCanvas = document.getElementById("editorCanvas");
-    const ectx = editorCanvas.getContext("2d");
-    let painting = false;
-    let color = document.getElementById("colorPicker").value;
-    let brushSize = document.getElementById("brushSize").value;
-    let tool = "brush";
-    let startX, startY;
-
-    function setTool(t) { tool = t; }
-
-    function startDraw(e) {
-      const rect = editorCanvas.getBoundingClientRect();
-      const scaleX = editorCanvas.width / rect.width;
-      const scaleY = editorCanvas.height / rect.height;
-      const x = ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
-      const y = ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
-      if (tool === "bucket") fillBucket(Math.floor(x), Math.floor(y));
-      else if (tool === "line") { startX = x; startY = y; painting = true; }
-      else { painting = true; draw(e); }
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(255,255,255,0.65)";
+      ctx.lineWidth = 2;
+      ctx.moveTo(-10, -6);
+      ctx.lineTo(10, 6);
+      ctx.moveTo(10, -6);
+      ctx.lineTo(-10, 6);
+      ctx.stroke();
     }
 
-    function endDraw(e) {
-      if (tool === "line" && painting) {
-        const rect = editorCanvas.getBoundingClientRect();
-        const scaleX = editorCanvas.width / rect.width;
-        const scaleY = editorCanvas.height / rect.height;
-        const x = ((e.touches ? e.changedTouches[0].clientX : e.clientX) - rect.left) * scaleX;
-        const y = ((e.touches ? e.changedTouches[0].clientY : e.clientY) - rect.top) * scaleY;
-        ectx.strokeStyle = color;
-        ectx.lineWidth = brushSize;
-        ectx.beginPath();
-        ectx.moveTo(startX, startY);
-        ectx.lineTo(x, y);
-        ectx.stroke();
-      }
-      painting = false;
-      ectx.beginPath();
-    }
+    ctx.restore();
+  }
 
-    function draw(e) {
-      if (!painting || tool !== "brush" && tool !== "eraser") return;
-      const rect = editorCanvas.getBoundingClientRect();
-      const scaleX = editorCanvas.width / rect.width;
-      const scaleY = editorCanvas.height / rect.height;
-      const x = ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
-      const y = ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
-      ectx.lineWidth = brushSize;
-      ectx.lineCap = "round";
-      if (tool === "eraser") {
-        ectx.globalCompositeOperation = "destination-out";
-      } else {
-        ectx.globalCompositeOperation = "source-over";
-        ectx.strokeStyle = color;
-      }
-      ectx.lineTo(x, y);
-      ectx.stroke();
-      ectx.beginPath();
-      ectx.moveTo(x, y);
-    }
+  function drawPaused() {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "800 24px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("PAUSED", W/2, H/2);
+    ctx.font = "600 14px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.80)";
+    ctx.fillText("Tap Resume or press P", W/2, H/2 + 26);
+    ctx.restore();
+  }
 
-    function fillBucket(x, y) {
-      const imgData = ectx.getImageData(0, 0, editorCanvas.width, editorCanvas.height);
-      const data = imgData.data;
-      const targetIdx = (y * editorCanvas.width + x) * 4;
-      const targetColor = data.slice(targetIdx, targetIdx + 4);
+  function showGameOver() {
+    // keep overlay hidden; HUD stays. Restart button works.
+    // If you want a full overlay, uncomment:
+    // overlay.style.display = "grid";
+  }
 
-      const newColor = hexToRgba(color);
-      if (colorsMatch(targetColor, newColor)) return;
-
-      const stack = [[x, y]];
-      while (stack.length) {
-        const [cx, cy] = stack.pop();
-        if (cx < 0 || cy < 0 || cx >= editorCanvas.width || cy >= editorCanvas.height) continue;
-        const idx = (cy * editorCanvas.width + cx) * 4;
-        const current = data.slice(idx, idx + 4);
-        if (!colorsMatch(current, targetColor)) continue;
-        data[idx] = newColor[0];
-        data[idx+1] = newColor[1];
-        data[idx+2] = newColor[2];
-        data[idx+3] = newColor[3];
-        stack.push([cx+1, cy], [cx-1, cy], [cx, cy+1], [cx, cy-1]);
-      }
-      ectx.putImageData(imgData, 0, 0);
-    }
-
-    function hexToRgba(hex) {
-      const bigint = parseInt(hex.slice(1), 16);
-      return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255, 255];
-    }
-
-    function colorsMatch(c1, c2) {
-      return c1[0]===c2[0] && c1[1]===c2[1] && c1[2]===c2[2] && c1[3]===c2[3];
-    }
-
-    function loadSpriteToEditor() {
-      const target = document.getElementById("spriteSelect").value;
-      ectx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
-      if (sprites[target]) {
-        ectx.drawImage(sprites[target], 0, 0);
-      }
-    }
-
-    editorCanvas.addEventListener("mousedown", startDraw);
-    editorCanvas.addEventListener("mouseup", endDraw);
-    editorCanvas.addEventListener("mousemove", draw);
-    editorCanvas.addEventListener("touchstart", startDraw);
-    editorCanvas.addEventListener("touchend", endDraw);
-    editorCanvas.addEventListener("touchmove", draw);
-
-    document.getElementById("colorPicker").addEventListener("change", e => color = e.target.value);
-    document.getElementById("brushSize").addEventListener("input", e => brushSize = e.target.value);
-
-    function saveSprite() {
-      const target = document.getElementById("spriteSelect").value;
-      const dataURL = editorCanvas.toDataURL("image/png");
-      let newImg = new Image();
-      newImg.src = dataURL;
-      sprites[target] = newImg;
-      setMode("play");
-    }
-
-        function clearEditor() {
-      ectx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
-    }
-  </script>
+  // ===== Start initial state =====
+  reset();
+})();
+</script>
 </body>
 </html>
