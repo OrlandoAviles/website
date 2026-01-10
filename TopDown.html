@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Top-Down Player + Mobile Joystick</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0e14; overflow: hidden; touch-action: none; }
+    #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+
+    /* Optional little label */
+    .hint {
+      position: fixed; top: 10px; left: 10px;
+      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: rgba(255,255,255,.75);
+      background: rgba(0,0,0,.35);
+      padding: 8px 10px; border-radius: 10px;
+      user-select: none; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">Drag left side = move (joystick). Desktop: WASD/Arrow keys.</div>
+  <div id="wrap"><canvas id="c"></canvas></div>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    // --- HiDPI resize ---
+    function resize() {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      canvas.width  = Math.floor(innerWidth * dpr);
+      canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + "px";
+      canvas.style.height = innerHeight + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    // --- Player ---
+    const player = {
+      x: innerWidth * 0.5,
+      y: innerHeight * 0.5,
+      r: 16,
+      speed: 240, // pixels/sec
+      vx: 0, vy: 0
+    };
+
+    // --- Keyboard input (desktop fallback) ---
+    const keys = new Set();
+    addEventListener("keydown", e => keys.add(e.key.toLowerCase()));
+    addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+
+    function keyboardAxis() {
+      let x = 0, y = 0;
+      if (keys.has("arrowleft") || keys.has("a")) x -= 1;
+      if (keys.has("arrowright") || keys.has("d")) x += 1;
+      if (keys.has("arrowup") || keys.has("w")) y -= 1;
+      if (keys.has("arrowdown") || keys.has("s")) y += 1;
+
+      // normalize diagonals
+      const len = Math.hypot(x, y);
+      if (len > 1e-6) { x /= len; y /= len; }
+      return { x, y };
+    }
+
+    // --- Virtual joystick (mobile) ---
+    const joy = {
+      active: false,
+      id: null,
+      baseX: 0, baseY: 0,
+      knobX: 0, knobY: 0,
+      max: 52,      // joystick radius
+      dead: 0.10,   // deadzone (0..1)
+      axisX: 0, axisY: 0
+    };
+
+    function setJoyFromPointer(px, py) {
+      const dx = px - joy.baseX;
+      const dy = py - joy.baseY;
+      const dist = Math.hypot(dx, dy);
+      const clamped = Math.min(dist, joy.max);
+      const nx = dist ? dx / dist : 0;
+      const ny = dist ? dy / dist : 0;
+
+      joy.knobX = joy.baseX + nx * clamped;
+      joy.knobY = joy.baseY + ny * clamped;
+
+      // axis in [-1,1]
+      let ax = (nx * clamped) / joy.max;
+      let ay = (ny * clamped) / joy.max;
+
+      // deadzone
+      const alen = Math.hypot(ax, ay);
+      if (alen < joy.dead) { ax = 0; ay = 0; }
+      else {
+        // rescale so it feels smooth after deadzone
+        const t = (alen - joy.dead) / (1 - joy.dead);
+        ax = (ax / alen) * t;
+        ay = (ay / alen) * t;
+      }
+
+      joy.axisX = ax;
+      joy.axisY = ay;
+    }
+
+    // We’ll use Pointer Events so it works for touch + mouse.
+    // Joystick is “left half of screen” by default.
+    canvas.addEventListener("pointerdown", (e) => {
+      canvas.setPointerCapture(e.pointerId);
+
+      const px = e.clientX;
+      const py = e.clientY;
+
+      if (!joy.active) {
+        joy.active = true;
+        joy.id = e.pointerId;
+        joy.baseX = px;
+        joy.baseY = py;
+        joy.knobX = px;
+        joy.knobY = py;
+        joy.axisX = 0;
+        joy.axisY = 0;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!joy.active || e.pointerId !== joy.id) return;
+      setJoyFromPointer(e.clientX, e.clientY);
+    }, { passive: false });
+
+    function endJoy(e) {
+      if (joy.active && e.pointerId === joy.id) {
+        joy.active = false;
+        joy.id = null;
+        joy.axisX = joy.axisY = 0;
+      }
+    }
+    canvas.addEventListener("pointerup", endJoy);
+    canvas.addEventListener("pointercancel", endJoy);
+    canvas.addEventListener("pointerout", endJoy);
+
+    // --- Game loop ---
+    let last = performance.now();
+    function tick(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+
+      // combine inputs: joystick overrides keyboard if active or non-zero
+      const kb = keyboardAxis();
+      let ax = kb.x, ay = kb.y;
+      if (joy.axisX !== 0 || joy.axisY !== 0) { ax = joy.axisX; ay = joy.axisY; }
+
+      player.vx = ax * player.speed;
+      player.vy = ay * player.speed;
+
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      // keep on screen
+      player.x = Math.max(player.r, Math.min(innerWidth - player.r, player.x));
+      player.y = Math.max(player.r, Math.min(innerHeight - player.r, player.y));
+
+      draw();
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    // --- Rendering ---
+    function drawGrid(spacing = 48) {
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = "#9bdcff";
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x <= innerWidth; x += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, innerHeight);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= innerHeight; y += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(innerWidth, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPlayer() {
+      // body
+      ctx.save();
+      ctx.fillStyle = "#7CFF8A";
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // facing/velocity indicator
+      const len = Math.hypot(player.vx, player.vy);
+      if (len > 1) {
+        const nx = player.vx / len;
+        const ny = player.vy / len;
+        ctx.strokeStyle = "rgba(0,0,0,.55)";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + nx * 22, player.y + ny * 22);
+        ctx.stroke();
+      }
+
+      // outline
+      ctx.strokeStyle = "rgba(0,0,0,.6)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawJoystick() {
+      if (!joy.active) return;
+
+      ctx.save();
+      // base
+      ctx.globalAlpha = 0.65;
+      ctx.fillStyle = "#1b2433";
+      ctx.beginPath();
+      ctx.arc(joy.baseX, joy.baseY, joy.max, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = "#9bdcff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(joy.baseX, joy.baseY, joy.max, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // knob
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "#9bdcff";
+      ctx.beginPath();
+      ctx.arc(joy.knobX, joy.knobY, joy.max * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      // background
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      ctx.fillStyle = "#0b0e14";
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+
+      drawGrid();
+      drawPlayer();
+      drawJoystick();
+    }
+  </script>
+</body>
+</html>
