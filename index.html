@@ -2,136 +2,266 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Prototype Apps Index</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Creative Dojo</title>
     <style>
-      :root {
-        --bg: #0b0d14;
-        --panel: #14182a;
-        --ink: #e9ecff;
-        --muted: #9aa2c8;
-        --accent: #7aa2ff;
-        --radius: 14px;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
       body {
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: #fff;
         margin: 0;
-        min-height: 100vh;
-        background: radial-gradient(circle at top, #1a1f3a, var(--bg));
-        color: var(--ink);
-        font-family:
-          system-ui,
-          -apple-system,
-          Segoe UI,
-          Roboto,
-          sans-serif;
-        display: flex;
-        justify-content: center;
-        padding: 24px;
-      }
-
-      .wrap {
-        width: 100%;
-        max-width: 820px;
+        padding: 20px;
       }
 
       h1 {
-        margin: 0 0 6px;
-        font-size: 1.8rem;
-        letter-spacing: 0.04em;
-        text-align: center;
+        font-size: 2.2rem;
+        margin-bottom: 5px;
       }
 
       .subtitle {
-        text-align: center;
-        color: var(--muted);
-        margin-bottom: 24px;
+        color: #aaa;
+        margin-bottom: 22px;
+        font-size: 1rem;
+      }
+
+      .section {
+        margin-top: 26px;
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+        margin: 0 0 12px;
+        color: #eaeaea;
+        letter-spacing: 0.2px;
+      }
+
+      .section-subtitle {
+        color: #9a9a9a;
+        margin: -6px 0 14px;
         font-size: 0.95rem;
+        line-height: 1.35;
+        max-width: 900px;
       }
 
-      .grid {
+      .card-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
       }
 
-      a.card {
-        text-decoration: none;
-        color: inherit;
-        background: linear-gradient(180deg, #1a1f3a, var(--panel));
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: var(--radius);
-        padding: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      .card {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 10px;
         transition:
-          transform 0.12s ease,
-          box-shadow 0.12s ease;
+          transform 0.2s,
+          box-shadow 0.2s;
       }
 
-      a.card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
       }
 
-      .card h2 {
-        margin: 0 0 6px;
-        font-size: 1.05rem;
-        letter-spacing: 0.05em;
+      .card a {
+        text-decoration: none;
+        color: #4cafef;
+        font-size: 1.1rem;
+        font-weight: bold;
       }
 
       .card p {
-        margin: 0;
-        font-size: 0.85rem;
-        color: var(--muted);
+        margin: 10px 0 0;
+        color: #aaa;
+        font-size: 0.9rem;
         line-height: 1.4;
       }
 
-      footer {
-        margin-top: 28px;
-        text-align: center;
+      /* Banner card for the main game */
+      .banner-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .card.banner {
+        padding: 18px;
+        border-radius: 14px;
+        background: linear-gradient(
+          135deg,
+          rgba(76, 175, 239, 0.15),
+          rgba(76, 239, 161, 0.08)
+        );
+        border: 1px solid rgba(76, 175, 239, 0.22);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+      }
+
+      .card.banner a {
+        font-size: 1.25rem;
+      }
+
+      .card.banner p {
+        font-size: 0.95rem;
+        color: #c7c7c7;
+        max-width: 980px;
+      }
+
+      /* Small label / badge */
+      .badge {
+        display: inline-block;
         font-size: 0.75rem;
-        color: var(--muted);
-        opacity: 0.8;
+        padding: 5px 9px;
+        border-radius: 999px;
+        margin-left: 10px;
+        vertical-align: middle;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ddd;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .badge.soon {
+        background: rgba(255, 193, 7, 0.12);
+        border-color: rgba(255, 193, 7, 0.22);
+        color: #ffd36d;
+      }
+
+      .card.disabled {
+        opacity: 0.85;
+      }
+
+      .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 22px 0 12px;
+        border-radius: 999px;
+      }
+
+      .footer-note {
+        margin-top: 30px;
+        color: #999;
+        font-size: 0.9rem;
+      }
+
+      .footer-note strong {
+        color: #ddd;
       }
     </style>
   </head>
-
   <body>
-    <main class="wrap">
-      <h1>My Projects</h1>
-      <div class="subtitle">Prototypes & Experiments</div>
+    <h1>Creative Dojo</h1>
+    <div class="subtitle">Development Training Grounds</div>
 
-      <section class="grid">
-        <a class="card" href="List.html">
-          <h2>Lists App</h2>
-          <p>Local storage notes & logs.</p>
-        </a>
+    <!-- DEV TOOLS -->
+    <div class="section">
+      <div class="section-title">Dev Tools</div>
+      <div class="section-subtitle">
+        Small, focused utilities that support my flagship RPG development and
+        help me practice building systems.
+      </div>
 
-        <a class="card" href="Journal.html">
-          <h2>Daily Journal</h2>
-          <p>Daily writing journal with word counter.</p>
-        </a>
+      <div class="card-container">
+        <div class="card">
+          <a href="List.html">Lists App</a>
+          <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
+        </div>
 
-        <a class="card" href="PixelSpriteEditor.html">
-          <h2>Pixel Sprite Editor</h2>
-          <p>Create pixel sprite images and animations.</p>
-        </a>
+        <div class="card">
+          <a href="Journal.html">Daily Journal</a>
+          <p>A lightweight daily journal for writing and progress tracking.</p>
+        </div>
 
-        <a class="card" href="TopDown.html">
-          <h2>Top-Down 2D RPG</h2>
+        <div class="card">
+          <a href="PixelSpriteEditor.html">Pixel Sprite Editor</a>
+          <p>Create pixel art sprites for games, icons, and spritesheets.</p>
+        </div>
+
+        <div class="card disabled">
+          <a href="#" onclick="return false;">Web Audio Beatpad</a>
+          <span class="badge soon">Coming Soon</span>
+          <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
+        </div>
+
+        <div class="card disabled">
+          <a href="#" onclick="return false;">Particle Engine</a>
+          <span class="badge soon">Coming Soon</span>
           <p>
-            Top-Down mobile RPG with joystick swipe movement and ATB combat
-            system
+            A reusable FX system for impact sparks, healing glow, and
+            UI/gameplay polish.
           </p>
-        </a>
-      </section>
+        </div>
+      </div>
+    </div>
 
-      <footer>Local-first • Single-file • No backend</footer>
-    </main>
+    <div class="divider"></div>
+
+    <!-- MAIN GAME -->
+    <div class="section">
+      <div class="section-title">Main Game</div>
+      <div class="section-subtitle">
+        One core project. Everything else is a tool that strengthens it.
+      </div>
+
+      <div class="banner-grid">
+        <div class="card banner">
+          <a href="TopDown.html">Top-Down RPG + ATB / Paradigm Combat</a>
+          <p>
+            A mobile-first top-down RPG prototype built in vanilla JavaScript.
+            Explore a field scene with joystick controls and random encounters.
+            Battles switch into an ATB-based “paradigm combat” system where
+            party roles can be shifted under time pressure.
+          </p>
+        </div>
+
+        <div class="card">
+          <a href="FF13 3v1.html">ATB Combat Prototype</a>
+          <p>
+            Standalone battle module used by the main game (3v1 encounter
+            prototype).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- HONORABLE MENTIONS / LAB -->
+    <div class="section">
+      <div class="section-title">Honorable Mentions (Lab)</div>
+      <div class="section-subtitle">
+        Extra prototypes and experiments I’ve built while learning and
+        iterating.
+      </div>
+
+      <div class="card-container">
+        <!-- Add back any additional links you want to keep visible -->
+        <!-- Example placeholders below. Uncomment and adjust if you want them shown here. -->
+
+        <!--
+      <div class="card">
+        <a href="threejsWizardryMobile.html">3D Dungeon Crawler Demo (Three.js)</a>
+        <p>3D grid-based dungeon movement prototype (mobile controls).</p>
+      </div>
+
+      <div class="card">
+        <a href="turn_based_rpg.html">Turn-Based RPG Combat Demo</a>
+        <p>Turn-based battle prototype with UI experimentation.</p>
+      </div>
+      -->
+
+        <div class="card">
+          <a href="#" onclick="return false;">(Add more here)</a>
+          <p>
+            Use this section for older/extra projects you want to keep on the
+            site without distracting from the main focus.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <p>
+        <strong>Design rules:</strong> Local-first · Single-file · No backend.
+      </p>
+    </div>
   </body>
 </html>
