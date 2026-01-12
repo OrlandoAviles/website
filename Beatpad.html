@@ -1,0 +1,383 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mini Beat Pad Recorder</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      display: grid;
+      place-items: center;
+      height: 100vh;
+    }
+    .app {
+      width: min(720px, 92vw);
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    h1 { margin: 0 0 12px; font-size: 18px; opacity: .9; }
+    .pads {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 14px 0 10px;
+    }
+    button.pad {
+      height: 90px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      background: #222;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform .05s ease;
+    }
+    button.pad:active { transform: scale(0.98); }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .controls button {
+      border-radius: 10px;
+      border: 1px solid #444;
+      background: #262626;
+      color: #fff;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      opacity: .9;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #333;
+      background: #161616;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Beat Pad (Record + Playback) 🥁</h1>
+
+    <div class="pads" id="pads"></div>
+
+    <div class="controls">
+      <button id="btnStartAudio">🔊 Start Audio</button>
+      <button id="btnRecord">⏺ Record</button>
+      <button id="btnStop">⏹ Stop</button>
+      <button id="btnPlay">▶️ Play</button>
+      <button id="btnClear">🧽 Clear</button>
+    </div>
+
+    <div class="status">
+      <div class="pill" id="statusText">Status: idle</div>
+      <div class="pill" id="statusInfo">Recorded hits: 0</div>
+      <div class="pill" id="statusTime">Length: 0.00s</div>
+    </div>
+  </div>
+
+<script>
+let audioCtx = null;
+let master = null;
+
+const state = {
+  isRecording: false,
+  recordStartTime: 0,
+  hits: [], // { padId, t }
+  lastTakeLength: 0
+};
+
+const pads = [
+  { id: "KICK", label: "Kick (Q)", key: "KeyQ" },
+  { id: "SNARE", label: "Snare (W)", key: "KeyW" },
+  { id: "HAT", label: "Hat (E)", key: "KeyE" },
+  { id: "CLAP", label: "Clap (A)", key: "KeyA" },
+  { id: "TOM", label: "Tom (S)", key: "KeyS" },
+  { id: "BASS808", label: "808 (D)", key: "KeyD" }
+];
+
+const padsEl = document.getElementById("pads");
+const statusText = document.getElementById("statusText");
+const statusInfo = document.getElementById("statusInfo");
+const statusTime = document.getElementById("statusTime");
+
+function uiStatus(msg) {
+  statusText.textContent = "Status: " + msg;
+  statusInfo.textContent = "Recorded hits: " + state.hits.length;
+  statusTime.textContent = "Length: " + state.lastTakeLength.toFixed(2) + "s";
+}
+
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  master = audioCtx.createGain();
+  master.gain.value = 0.9;
+  master.connect(audioCtx.destination);
+}
+
+function now() {
+  return audioCtx.currentTime;
+}
+
+// --- SOUND DESIGN (simple synth drums) ---
+// These are intentionally lightweight and “808-ish”, not perfect realism.
+
+function triggerKick(atTime) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "sine";
+  // pitch drop = punch
+  osc.frequency.setValueAtTime(160, atTime);
+  osc.frequency.exponentialRampToValueAtTime(50, atTime + 0.09);
+
+  gain.gain.setValueAtTime(0.0001, atTime);
+  gain.gain.exponentialRampToValueAtTime(1.0, atTime + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.22);
+
+  osc.connect(gain);
+  gain.connect(master);
+
+  osc.start(atTime);
+  osc.stop(atTime + 0.3);
+}
+
+function triggerSnare(atTime) {
+  // noise burst + tone
+  const noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.2, audioCtx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuf;
+
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = "highpass";
+  noiseFilter.frequency.value = 1200;
+
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, atTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.7, atTime + 0.003);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.14);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(master);
+
+  // tone layer
+  const tone = audioCtx.createOscillator();
+  const toneGain = audioCtx.createGain();
+  tone.type = "triangle";
+  tone.frequency.setValueAtTime(220, atTime);
+
+  toneGain.gain.setValueAtTime(0.0001, atTime);
+  toneGain.gain.exponentialRampToValueAtTime(0.2, atTime + 0.002);
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.10);
+
+  tone.connect(toneGain);
+  toneGain.connect(master);
+
+  noise.start(atTime);
+  noise.stop(atTime + 0.2);
+
+  tone.start(atTime);
+  tone.stop(atTime + 0.12);
+}
+
+function triggerHat(atTime) {
+  // metallic noise-ish hat
+  const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.06, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+
+  const hp = audioCtx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 7000;
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, atTime);
+  g.gain.exponentialRampToValueAtTime(0.4, atTime + 0.001);
+  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.05);
+
+  src.connect(hp);
+  hp.connect(g);
+  g.connect(master);
+
+  src.start(atTime);
+  src.stop(atTime + 0.06);
+}
+
+function triggerClap(atTime) {
+  // multiple noise taps
+  const taps = [0, 0.015, 0.03, 0.045];
+  taps.forEach((dt, idx) => {
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1800;
+
+    const g = audioCtx.createGain();
+    const t = atTime + dt;
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5 / (1 + idx), t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(master);
+
+    src.start(t);
+    src.stop(t + 0.08);
+  });
+}
+
+function triggerTom(atTime) {
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(260, atTime);
+  osc.frequency.exponentialRampToValueAtTime(120, atTime + 0.12);
+
+  g.gain.setValueAtTime(0.0001, atTime);
+  g.gain.exponentialRampToValueAtTime(0.8, atTime + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.25);
+
+  osc.connect(g);
+  g.connect(master);
+
+  osc.start(atTime);
+  osc.stop(atTime + 0.3);
+}
+
+function trigger808(atTime) {
+  // longer sub bass with slight pitch drop
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(80, atTime);
+  osc.frequency.exponentialRampToValueAtTime(50, atTime + 0.08);
+
+  g.gain.setValueAtTime(0.0001, atTime);
+  g.gain.exponentialRampToValueAtTime(0.9, atTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.75);
+
+  osc.connect(g);
+  g.connect(master);
+
+  osc.start(atTime);
+  osc.stop(atTime + 0.9);
+}
+
+function triggerPad(padId, atTime = now()) {
+  ensureAudio();
+  if (audioCtx.state !== "running") audioCtx.resume();
+
+  // record event if recording
+  if (state.isRecording) {
+    const t = atTime - state.recordStartTime;
+    state.hits.push({ padId, t });
+    state.lastTakeLength = Math.max(state.lastTakeLength, t);
+    uiStatus("recording");
+  }
+
+  switch (padId) {
+    case "KICK": triggerKick(atTime); break;
+    case "SNARE": triggerSnare(atTime); break;
+    case "HAT": triggerHat(atTime); break;
+    case "CLAP": triggerClap(atTime); break;
+    case "TOM": triggerTom(atTime); break;
+    case "BASS808": trigger808(atTime); break;
+  }
+}
+
+// --- UI ---
+pads.forEach(p => {
+  const b = document.createElement("button");
+  b.className = "pad";
+  b.textContent = p.label;
+  b.addEventListener("click", () => triggerPad(p.id));
+  padsEl.appendChild(b);
+});
+
+document.addEventListener("keydown", (e) => {
+  const pad = pads.find(p => p.key === e.code);
+  if (pad) triggerPad(pad.id);
+});
+
+// --- Controls ---
+document.getElementById("btnStartAudio").addEventListener("click", () => {
+  ensureAudio();
+  audioCtx.resume();
+  uiStatus("audio started");
+});
+
+document.getElementById("btnRecord").addEventListener("click", () => {
+  ensureAudio();
+  state.hits = [];
+  state.isRecording = true;
+  state.recordStartTime = now();
+  state.lastTakeLength = 0;
+  uiStatus("recording");
+});
+
+document.getElementById("btnStop").addEventListener("click", () => {
+  if (!audioCtx) return;
+  state.isRecording = false;
+  uiStatus("stopped");
+});
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  state.hits = [];
+  state.lastTakeLength = 0;
+  uiStatus("cleared");
+});
+
+document.getElementById("btnPlay").addEventListener("click", () => {
+  ensureAudio();
+  if (!state.hits.length) {
+    uiStatus("nothing to play");
+    return;
+  }
+  const base = now() + 0.05; // tiny scheduling safety buffer
+  const length = Math.max(0.2, state.lastTakeLength + 0.2);
+
+  uiStatus("playing…");
+
+  for (const hit of state.hits) {
+    triggerPad(hit.padId, base + hit.t);
+  }
+
+  setTimeout(() => uiStatus("idle"), length * 1000);
+});
+
+uiStatus("idle");
+</script>
+</body>
+</html>
