@@ -2,125 +2,186 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Mini Beat Pad Recorder</title>
+  <title>Sakuraba Beatpad (Latency Calibrated)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body {
       margin: 0;
       font-family: system-ui, sans-serif;
-      background: #111;
+      background: #0f0f12;
       color: #eee;
       display: grid;
       place-items: center;
-      height: 100vh;
+      min-height: 100vh;
     }
     .app {
-      width: min(720px, 92vw);
-      background: #1a1a1a;
+      width: min(900px, 96vw);
+      background: #17171c;
       border: 1px solid #333;
-      border-radius: 14px;
-      padding: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.45);
     }
-    h1 { margin: 0 0 12px; font-size: 18px; opacity: .9; }
+    h1 { margin: 0 0 8px; font-size: 18px; opacity: .95; }
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
+    }
     .pads {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
-      margin: 14px 0 10px;
+      margin-top: 12px;
     }
     button.pad {
       height: 90px;
-      border-radius: 12px;
+      border-radius: 14px;
       border: 1px solid #444;
-      background: #222;
+      background: #202028;
       color: #fff;
       font-size: 16px;
       cursor: pointer;
-      transition: transform .05s ease;
+      transition: transform .05s ease, filter .1s ease;
+      user-select: none;
+      touch-action: manipulation;
     }
-    button.pad:active { transform: scale(0.98); }
-    .controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
+    button.pad:active { transform: scale(0.985); filter: brightness(1.15); }
+
     .controls button {
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid #444;
-      background: #262626;
+      background: #23232b;
       color: #fff;
       padding: 10px 12px;
       cursor: pointer;
     }
-    .status {
-      margin-top: 10px;
-      font-size: 14px;
-      opacity: .9;
-      display: flex;
-      justify-content: space-between;
+    .controls button.primary { background: #2a2a42; border-color: #5757aa; }
+    .controls button.danger { background: #382023; border-color: #a35; }
+
+    .panel {
+      border: 1px solid #2d2d35;
+      background: #121216;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      flex-wrap: wrap;
     }
     .pill {
-      padding: 6px 10px;
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid #2d2d35;
+      background: #121216;
+      padding: 8px 10px;
       border-radius: 999px;
-      border: 1px solid #333;
-      background: #161616;
+      font-size: 13px;
+      opacity: .95;
     }
+    label { font-size: 13px; opacity: .9; }
+    input[type="range"] { width: 240px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .muted { opacity: .75; font-size: 13px; }
+    .bar {
+      height: 10px;
+      border-radius: 999px;
+      background: #0d0d12;
+      border: 1px solid #2b2b35;
+      overflow: hidden;
+    }
+    .bar > div {
+      height: 100%;
+      width: 50%;
+      transform-origin: left;
+      background: #6aa3ff;
+      opacity: .85;
+    }
+    .warn { color: #ffd36a; }
   </style>
 </head>
+
 <body>
-  <div class="app">
-    <h1>Beat Pad (Record + Playback) 🥁</h1>
+<div class="app">
+  <h1>🎛️ Sakuraba Beatpad (Latency Calibrated)</h1>
+  <div class="muted">Goal: keep your offbeat feel, remove browser jitter.</div>
 
-    <div class="pads" id="pads"></div>
+  <div class="panel grid2">
+    <div>
+      <div class="row controls">
+        <button id="btnStartAudio" class="primary">🔊 Start Audio</button>
+        <button id="btnMetronome">🕰️ Metronome</button>
+        <button id="btnTapCalibrate">👆 Tap Calibrate</button>
+      </div>
 
-    <div class="controls">
-      <button id="btnStartAudio">🔊 Start Audio</button>
-      <button id="btnRecord">⏺ Record</button>
-      <button id="btnStop">⏹ Stop</button>
-      <button id="btnPlay">▶️ Play</button>
-      <button id="btnClear">🧽 Clear</button>
+      <div class="row">
+        <span class="pill">BPM: <code id="bpmLabel">120</code></span>
+        <label>
+          <input id="bpm" type="range" min="60" max="200" value="120" />
+        </label>
+      </div>
+
+      <div class="row">
+        <span class="pill">Latency comp: <code id="latLabel">45</code> ms</span>
+        <label>
+          <input id="latency" type="range" min="0" max="120" value="45" />
+        </label>
+      </div>
+
+      <div class="row">
+        <span class="pill">Smoothing: <code id="smoothLabel">0.15</code></span>
+        <label>
+          <input id="smoothing" type="range" min="0" max="0.9" step="0.05" value="0.15" />
+        </label>
+      </div>
+
+      <div class="row">
+        <span class="pill" id="calStatus">Calibrate: <code>not started</code></span>
+      </div>
     </div>
 
-    <div class="status">
-      <div class="pill" id="statusText">Status: idle</div>
-      <div class="pill" id="statusInfo">Recorded hits: 0</div>
-      <div class="pill" id="statusTime">Length: 0.00s</div>
+    <div>
+      <div class="row controls">
+        <button id="btnRecord" class="danger">⏺ Record</button>
+        <button id="btnStop">⏹ Stop</button>
+        <button id="btnPlay">▶️ Play</button>
+        <button id="btnClear">🧽 Clear</button>
+      </div>
+
+      <div class="row">
+        <span class="pill" id="statusText">Status: <code>idle</code></span>
+        <span class="pill" id="statusInfo">Hits: <code>0</code></span>
+        <span class="pill" id="statusTime">Len: <code>0.00</code>s</span>
+      </div>
+
+      <div class="row">
+        <div style="flex:1">
+          <div class="muted">Tap offset vs metronome (avg)</div>
+          <div class="bar"><div id="offsetBar"></div></div>
+          <div class="muted"><span id="offsetText">—</span></div>
+        </div>
+      </div>
+
+      <div class="muted warn" id="hint">
+        Tip: Start metronome → Tap calibrate → tap along 8+ times.
+      </div>
     </div>
   </div>
 
+  <div class="pads" id="pads"></div>
+</div>
+
 <script>
+/* ---------------------------
+   AUDIO SETUP
+--------------------------- */
 let audioCtx = null;
 let master = null;
-
-const state = {
-  isRecording: false,
-  recordStartTime: 0,
-  hits: [], // { padId, t }
-  lastTakeLength: 0
-};
-
-const pads = [
-  { id: "KICK", label: "Kick (Q)", key: "KeyQ" },
-  { id: "SNARE", label: "Snare (W)", key: "KeyW" },
-  { id: "HAT", label: "Hat (E)", key: "KeyE" },
-  { id: "CLAP", label: "Clap (A)", key: "KeyA" },
-  { id: "TOM", label: "Tom (S)", key: "KeyS" },
-  { id: "BASS808", label: "808 (D)", key: "KeyD" }
-];
-
-const padsEl = document.getElementById("pads");
-const statusText = document.getElementById("statusText");
-const statusInfo = document.getElementById("statusInfo");
-const statusTime = document.getElementById("statusTime");
-
-function uiStatus(msg) {
-  statusText.textContent = "Status: " + msg;
-  statusInfo.textContent = "Recorded hits: " + state.hits.length;
-  statusTime.textContent = "Length: " + state.lastTakeLength.toFixed(2) + "s";
-}
 
 function ensureAudio() {
   if (audioCtx) return;
@@ -130,77 +191,110 @@ function ensureAudio() {
   master.connect(audioCtx.destination);
 }
 
-function now() {
-  return audioCtx.currentTime;
+function now() { return audioCtx.currentTime; }
+
+/* ---------------------------
+   TIMING + STATE
+--------------------------- */
+const timing = {
+  scheduleAhead: 0.06,
+  inputLatency: 0.045,
+  smoothing: 0.15
+};
+
+const state = {
+  isRecording: false,
+  recordStartTime: 0,
+  hits: [],         // { padId, t } where t is seconds from record start (latency compensated)
+  lastTakeLength: 0,
+
+  // metronome
+  bpm: 120,
+  metronomeOn: false,
+  metroIntervalId: null,
+  metroNextTime: 0,
+
+  // calibration
+  calibrating: false,
+  tapOffsets: [],   // offsets in seconds: (tapTime - nearestClickTime)
+  lastClickTimes: [] // times (AudioContext seconds) of metronome clicks
+};
+
+function secondsPerBeat() { return 60 / state.bpm; }
+
+function smoothTime(t, prevT) {
+  if (prevT == null) return t;
+  const a = timing.smoothing; // 0..1
+  return prevT + (t - prevT) * (1 - a);
 }
 
-// --- SOUND DESIGN (simple synth drums) ---
-// These are intentionally lightweight and “808-ish”, not perfect realism.
+function uiStatus(msg) {
+  document.getElementById("statusText").innerHTML = `Status: <code>${msg}</code>`;
+  document.getElementById("statusInfo").innerHTML = `Hits: <code>${state.hits.length}</code>`;
+  document.getElementById("statusTime").innerHTML = `Len: <code>${state.lastTakeLength.toFixed(2)}</code>s`;
+}
 
+/* ---------------------------
+   SOUND DESIGN (SYNTH DRUMS)
+--------------------------- */
 function triggerKick(atTime) {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
   osc.type = "sine";
-  // pitch drop = punch
-  osc.frequency.setValueAtTime(160, atTime);
-  osc.frequency.exponentialRampToValueAtTime(50, atTime + 0.09);
+  osc.frequency.setValueAtTime(170, atTime);
+  osc.frequency.exponentialRampToValueAtTime(45, atTime + 0.09);
 
   gain.gain.setValueAtTime(0.0001, atTime);
   gain.gain.exponentialRampToValueAtTime(1.0, atTime + 0.005);
-  gain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.22);
+  gain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.24);
 
   osc.connect(gain);
   gain.connect(master);
-
   osc.start(atTime);
   osc.stop(atTime + 0.3);
 }
 
 function triggerSnare(atTime) {
-  // noise burst + tone
-  const noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.2, audioCtx.sampleRate);
+  const noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.22, audioCtx.sampleRate);
   const data = noiseBuf.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
 
   const noise = audioCtx.createBufferSource();
   noise.buffer = noiseBuf;
 
-  const noiseFilter = audioCtx.createBiquadFilter();
-  noiseFilter.type = "highpass";
-  noiseFilter.frequency.value = 1200;
+  const hp = audioCtx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 1200;
 
-  const noiseGain = audioCtx.createGain();
-  noiseGain.gain.setValueAtTime(0.0001, atTime);
-  noiseGain.gain.exponentialRampToValueAtTime(0.7, atTime + 0.003);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.14);
+  const ng = audioCtx.createGain();
+  ng.gain.setValueAtTime(0.0001, atTime);
+  ng.gain.exponentialRampToValueAtTime(0.8, atTime + 0.003);
+  ng.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.16);
 
-  noise.connect(noiseFilter);
-  noiseFilter.connect(noiseGain);
-  noiseGain.connect(master);
+  noise.connect(hp);
+  hp.connect(ng);
+  ng.connect(master);
 
-  // tone layer
   const tone = audioCtx.createOscillator();
-  const toneGain = audioCtx.createGain();
+  const tg = audioCtx.createGain();
   tone.type = "triangle";
   tone.frequency.setValueAtTime(220, atTime);
 
-  toneGain.gain.setValueAtTime(0.0001, atTime);
-  toneGain.gain.exponentialRampToValueAtTime(0.2, atTime + 0.002);
-  toneGain.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.10);
+  tg.gain.setValueAtTime(0.0001, atTime);
+  tg.gain.exponentialRampToValueAtTime(0.22, atTime + 0.002);
+  tg.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.11);
 
-  tone.connect(toneGain);
-  toneGain.connect(master);
+  tone.connect(tg);
+  tg.connect(master);
 
   noise.start(atTime);
-  noise.stop(atTime + 0.2);
-
+  noise.stop(atTime + 0.22);
   tone.start(atTime);
-  tone.stop(atTime + 0.12);
+  tone.stop(atTime + 0.13);
 }
 
 function triggerHat(atTime) {
-  // metallic noise-ish hat
   const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.06, audioCtx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
@@ -214,7 +308,7 @@ function triggerHat(atTime) {
 
   const g = audioCtx.createGain();
   g.gain.setValueAtTime(0.0001, atTime);
-  g.gain.exponentialRampToValueAtTime(0.4, atTime + 0.001);
+  g.gain.exponentialRampToValueAtTime(0.45, atTime + 0.001);
   g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.05);
 
   src.connect(hp);
@@ -226,8 +320,7 @@ function triggerHat(atTime) {
 }
 
 function triggerClap(atTime) {
-  // multiple noise taps
-  const taps = [0, 0.015, 0.03, 0.045];
+  const taps = [0, 0.016, 0.032, 0.048];
   taps.forEach((dt, idx) => {
     const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
     const data = buf.getChannelData(0);
@@ -244,7 +337,7 @@ function triggerClap(atTime) {
     const t = atTime + dt;
 
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.5 / (1 + idx), t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.55 / (1 + idx), t + 0.001);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
 
     src.connect(bp);
@@ -259,49 +352,62 @@ function triggerClap(atTime) {
 function triggerTom(atTime) {
   const osc = audioCtx.createOscillator();
   const g = audioCtx.createGain();
-
   osc.type = "sine";
   osc.frequency.setValueAtTime(260, atTime);
   osc.frequency.exponentialRampToValueAtTime(120, atTime + 0.12);
 
   g.gain.setValueAtTime(0.0001, atTime);
-  g.gain.exponentialRampToValueAtTime(0.8, atTime + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.85, atTime + 0.003);
   g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.25);
 
   osc.connect(g);
   g.connect(master);
-
   osc.start(atTime);
   osc.stop(atTime + 0.3);
 }
 
 function trigger808(atTime) {
-  // longer sub bass with slight pitch drop
   const osc = audioCtx.createOscillator();
   const g = audioCtx.createGain();
-
   osc.type = "sine";
   osc.frequency.setValueAtTime(80, atTime);
-  osc.frequency.exponentialRampToValueAtTime(50, atTime + 0.08);
+  osc.frequency.exponentialRampToValueAtTime(48, atTime + 0.08);
 
   g.gain.setValueAtTime(0.0001, atTime);
-  g.gain.exponentialRampToValueAtTime(0.9, atTime + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.75);
+  g.gain.exponentialRampToValueAtTime(0.95, atTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.8);
 
   osc.connect(g);
   g.connect(master);
-
   osc.start(atTime);
   osc.stop(atTime + 0.9);
 }
 
-function triggerPad(padId, atTime = now()) {
+function triggerMetronomeClick(atTime) {
+  // tiny click: high pitch blip
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(1600, atTime);
+  g.gain.setValueAtTime(0.0001, atTime);
+  g.gain.exponentialRampToValueAtTime(0.25, atTime + 0.001);
+  g.gain.exponentialRampToValueAtTime(0.0001, atTime + 0.03);
+  osc.connect(g);
+  g.connect(master);
+  osc.start(atTime);
+  osc.stop(atTime + 0.04);
+}
+
+function triggerPad(padId, atTime = now(), fromPlayback = false) {
   ensureAudio();
   if (audioCtx.state !== "running") audioCtx.resume();
 
-  // record event if recording
-  if (state.isRecording) {
-    const t = atTime - state.recordStartTime;
+  // Record: store latency-compensated performance time
+  if (state.isRecording && !fromPlayback) {
+    const raw = now() - state.recordStartTime - timing.inputLatency;
+    const prev = state.hits.length ? state.hits[state.hits.length - 1].t : null;
+    const t = smoothTime(Math.max(0, raw), prev);
+
     state.hits.push({ padId, t });
     state.lastTakeLength = Math.max(state.lastTakeLength, t);
     uiStatus("recording");
@@ -314,15 +420,140 @@ function triggerPad(padId, atTime = now()) {
     case "CLAP": triggerClap(atTime); break;
     case "TOM": triggerTom(atTime); break;
     case "BASS808": trigger808(atTime); break;
+    case "METRO": triggerMetronomeClick(atTime); break;
+  }
+
+  // Calibration tap: compare tap time against nearest metronome click
+  if (state.calibrating && padId !== "METRO" && state.metronomeOn) {
+    registerCalibrationTap(now());
   }
 }
 
-// --- UI ---
+/* ---------------------------
+   METRONOME SCHEDULER
+--------------------------- */
+function startMetronome() {
+  ensureAudio();
+  if (audioCtx.state !== "running") audioCtx.resume();
+
+  state.metronomeOn = true;
+  state.lastClickTimes = [];
+
+  // schedule starting slightly in future
+  state.metroNextTime = now() + 0.05;
+
+  if (state.metroIntervalId) clearInterval(state.metroIntervalId);
+
+  // classic lookahead scheduler
+  state.metroIntervalId = setInterval(() => {
+    const lookahead = 0.12;
+
+    while (state.metroNextTime < now() + lookahead) {
+      triggerPad("METRO", state.metroNextTime, true);
+
+      // store click times (keep last ~32)
+      state.lastClickTimes.push(state.metroNextTime);
+      if (state.lastClickTimes.length > 32) state.lastClickTimes.shift();
+
+      state.metroNextTime += secondsPerBeat();
+    }
+  }, 25);
+}
+
+function stopMetronome() {
+  state.metronomeOn = false;
+  if (state.metroIntervalId) clearInterval(state.metroIntervalId);
+  state.metroIntervalId = null;
+}
+
+/* ---------------------------
+   CALIBRATION
+--------------------------- */
+function registerCalibrationTap(tapTime) {
+  if (!state.lastClickTimes.length) return;
+
+  // find nearest click time
+  let nearest = state.lastClickTimes[0];
+  let bestDist = Math.abs(tapTime - nearest);
+
+  for (const ct of state.lastClickTimes) {
+    const d = Math.abs(tapTime - ct);
+    if (d < bestDist) {
+      bestDist = d;
+      nearest = ct;
+    }
+  }
+
+  // offset: positive means you tapped after click (late)
+  const offset = tapTime - nearest;
+  state.tapOffsets.push(offset);
+
+  // keep last ~24 taps
+  if (state.tapOffsets.length > 24) state.tapOffsets.shift();
+
+  updateCalibrationUI();
+}
+
+function avgOffsetSec() {
+  if (!state.tapOffsets.length) return 0;
+  const sum = state.tapOffsets.reduce((a,b)=>a+b,0);
+  return sum / state.tapOffsets.length;
+}
+
+function updateCalibrationUI() {
+  const avg = avgOffsetSec();
+  const ms = avg * 1000;
+
+  const el = document.getElementById("calStatus");
+  el.innerHTML = `Calibrate: <code>${state.tapOffsets.length ? (ms.toFixed(1) + " ms avg") : "tap along…"}</code>`;
+
+  // visualize offset -60ms..+60ms mapped to bar
+  const clamped = Math.max(-0.06, Math.min(0.06, avg));
+  const normalized = (clamped + 0.06) / 0.12; // 0..1
+  const bar = document.getElementById("offsetBar");
+  bar.style.transform = `scaleX(${normalized})`;
+
+  const txt = document.getElementById("offsetText");
+  txt.textContent = state.tapOffsets.length
+    ? `Avg tap offset: ${ms.toFixed(1)}ms (positive = late).`
+    : "Tap with the metronome to measure your device delay.";
+
+  // auto suggest latency comp: use average tap offset as base
+  // if you consistently tap late by +35ms, compensate by ~35ms
+  const suggested = Math.max(0, Math.min(0.12, ms / 1000));
+  // don't auto overwrite slider constantly, only once we have enough taps:
+  if (state.tapOffsets.length === 8) {
+    timing.inputLatency = suggested;
+    document.getElementById("latency").value = Math.round(suggested * 1000);
+    document.getElementById("latLabel").textContent = Math.round(suggested * 1000);
+  }
+}
+
+/* ---------------------------
+   UI: PADS
+--------------------------- */
+const pads = [
+  { id: "KICK", label: "Kick (Q)", key: "KeyQ" },
+  { id: "SNARE", label: "Snare (W)", key: "KeyW" },
+  { id: "HAT", label: "Hat (E)", key: "KeyE" },
+  { id: "CLAP", label: "Clap (A)", key: "KeyA" },
+  { id: "TOM", label: "Tom (S)", key: "KeyS" },
+  { id: "BASS808", label: "808 (D)", key: "KeyD" }
+];
+
+const padsEl = document.getElementById("pads");
 pads.forEach(p => {
   const b = document.createElement("button");
   b.className = "pad";
   b.textContent = p.label;
-  b.addEventListener("click", () => triggerPad(p.id));
+  b.addEventListener("pointerdown", (e) => {
+  e.preventDefault(); // prevents ghost click + delays
+  triggerPad(p.id);
+});
+
+  b.addEventListener("click", (e) => e.preventDefault());
+
+  
   padsEl.appendChild(b);
 });
 
@@ -331,19 +562,52 @@ document.addEventListener("keydown", (e) => {
   if (pad) triggerPad(pad.id);
 });
 
-// --- Controls ---
+/* ---------------------------
+   UI: CONTROLS
+--------------------------- */
 document.getElementById("btnStartAudio").addEventListener("click", () => {
   ensureAudio();
   audioCtx.resume();
   uiStatus("audio started");
 });
 
+document.getElementById("btnMetronome").addEventListener("click", () => {
+  ensureAudio();
+  if (!state.metronomeOn) {
+    startMetronome();
+    uiStatus("metronome ON");
+  } else {
+    stopMetronome();
+    uiStatus("metronome OFF");
+  }
+});
+
+document.getElementById("btnTapCalibrate").addEventListener("click", () => {
+  ensureAudio();
+  state.calibrating = !state.calibrating;
+
+  if (state.calibrating) {
+    state.tapOffsets = [];
+    document.getElementById("hint").textContent =
+      "Calibrating: tap pads along with the metronome (8+ taps).";
+    updateCalibrationUI();
+    uiStatus("calibrating");
+  } else {
+    document.getElementById("hint").textContent =
+      "Tip: Start metronome → Tap calibrate → tap along 8+ times.";
+    uiStatus("idle");
+  }
+});
+
 document.getElementById("btnRecord").addEventListener("click", () => {
   ensureAudio();
+  if (audioCtx.state !== "running") audioCtx.resume();
+
   state.hits = [];
   state.isRecording = true;
   state.recordStartTime = now();
   state.lastTakeLength = 0;
+
   uiStatus("recording");
 });
 
@@ -365,19 +629,40 @@ document.getElementById("btnPlay").addEventListener("click", () => {
     uiStatus("nothing to play");
     return;
   }
-  const base = now() + 0.05; // tiny scheduling safety buffer
-  const length = Math.max(0.2, state.lastTakeLength + 0.2);
 
-  uiStatus("playing…");
-
+  // schedule everything slightly ahead
+  const base = now() + timing.scheduleAhead;
   for (const hit of state.hits) {
-    triggerPad(hit.padId, base + hit.t);
+    triggerPad(hit.padId, base + hit.t, true);
   }
 
+  const length = Math.max(0.2, state.lastTakeLength + 0.5);
+  uiStatus("playing…");
   setTimeout(() => uiStatus("idle"), length * 1000);
 });
 
+// sliders
+document.getElementById("bpm").addEventListener("input", (e) => {
+  state.bpm = Number(e.target.value);
+  document.getElementById("bpmLabel").textContent = state.bpm;
+});
+
+document.getElementById("latency").addEventListener("input", (e) => {
+  const ms = Number(e.target.value);
+  timing.inputLatency = ms / 1000;
+  document.getElementById("latLabel").textContent = ms;
+});
+
+document.getElementById("smoothing").addEventListener("input", (e) => {
+  const v = Number(e.target.value);
+  timing.smoothing = v;
+  document.getElementById("smoothLabel").textContent = v.toFixed(2);
+});
+
+// init
+state.bpm = 120;
 uiStatus("idle");
+updateCalibrationUI();
 </script>
 </body>
 </html>
