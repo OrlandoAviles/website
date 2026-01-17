@@ -4,18 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Creative Dojo</title>
+
     <style>
+      /* =========================
+         BASE
+      ========================== */
       body {
         font-family: Arial, sans-serif;
-        background: #111;
         color: #fff;
         margin: 0;
         padding: 20px;
+        background: #0b0b0f;
+        overflow-x: hidden;
       }
 
+      /* =========================
+         RANDOM SPACE CANVAS BG
+      ========================== */
+      #space {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        background: #0b0b0f;
+      }
+
+      .scanlines {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.02) 0px,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 2px,
+          transparent 6px
+        );
+        opacity: 0.08;
+        mix-blend-mode: overlay;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .scanlines {
+          display: none;
+        }
+      }
+
+      /* =========================
+         TYPOGRAPHY
+      ========================== */
       h1 {
         font-size: 2.2rem;
         margin-bottom: 5px;
+        letter-spacing: 0.2px;
       }
 
       .subtitle {
@@ -24,6 +68,9 @@
         font-size: 1rem;
       }
 
+      /* =========================
+         LAYOUT
+      ========================== */
       .section {
         margin-top: 26px;
       }
@@ -49,35 +96,235 @@
         gap: 15px;
       }
 
-      .card {
-        background: #1e1e1e;
-        padding: 15px;
-        border-radius: 10px;
+      .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 22px 0 12px;
+        border-radius: 999px;
+      }
+
+      /* =========================
+         FILTER BAR
+      ========================== */
+      .filterbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0 16px;
+        align-items: center;
+      }
+
+      .filter-label {
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.9rem;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        margin-right: 4px;
+      }
+
+      .filter-btn {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #eee;
+        padding: 8px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 800;
+        letter-spacing: 0.2px;
         transition:
-          transform 0.2s,
-          box-shadow 0.2s;
+          transform 0.08s ease,
+          background 0.15s ease,
+          border-color 0.15s ease;
+        user-select: none;
       }
 
-      .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      .filter-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(76, 175, 239, 0.25);
       }
 
-      .card a {
+      .filter-btn:active {
+        transform: translateY(1px);
+      }
+
+      .filter-btn.active {
+        border-color: rgba(76, 175, 239, 0.35);
+        background: rgba(76, 175, 239, 0.14);
+        box-shadow: 0 0 18px rgba(76, 175, 239, 0.16);
+      }
+
+      .filter-count {
+        margin-left: auto;
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 0.9rem;
+      }
+
+      .card-link.hidden {
+        display: none !important;
+      }
+
+      /* =========================
+         CARD LINK + CARD (Spruced)
+      ========================== */
+      .card-link {
+        display: block;
         text-decoration: none;
+        color: inherit;
+        border-radius: 18px;
+        outline: none;
+      }
+
+      .card {
+        position: relative;
+        overflow: hidden;
+
+        padding: 16px 16px 16px 28px;
+
+        border-radius: 18px;
+        background: rgba(30, 30, 30, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+
+        transform: translateY(0);
+        transition:
+          transform 0.22s ease,
+          box-shadow 0.25s ease,
+          border-color 0.25s ease,
+          filter 0.25s ease;
+      }
+
+      /* Accent bar */
+      .card::after {
+        content: "";
+        position: absolute;
+        top: 12px;
+        left: 10px;
+        bottom: 12px;
+        width: 2px;
+        border-radius: 999px;
+
+        background: linear-gradient(
+          to bottom,
+          rgba(76, 175, 239, 0.92),
+          rgba(76, 239, 161, 0.78)
+        );
+        opacity: 0.25;
+        transition:
+          opacity 0.25s ease,
+          filter 0.25s ease;
+      }
+
+      /* Shimmer sweep */
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: -40%;
+        background: linear-gradient(
+          115deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.06) 35%,
+          rgba(76, 175, 239, 0.08) 50%,
+          rgba(255, 255, 255, 0.05) 65%,
+          transparent 100%
+        );
+        transform: translateX(-70%) rotate(8deg);
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        pointer-events: none;
+      }
+
+      .card-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+
+        transition:
+          transform 0.22s ease,
+          border-color 0.25s ease;
+      }
+
+      .card-title {
         color: #4cafef;
-        font-size: 1.1rem;
-        font-weight: bold;
+        font-size: 1.08rem;
+        font-weight: 900;
+        margin: 0;
+        letter-spacing: 0.15px;
+        transition: transform 0.22s ease;
       }
 
       .card p {
         margin: 10px 0 0;
         color: #aaa;
         font-size: 0.9rem;
-        line-height: 1.4;
+        line-height: 1.45;
       }
 
-      /* Banner card for the main game */
+      .card-meta {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .card-link:hover .card,
+      .card-link:focus-visible .card {
+        transform: translateY(-7px);
+        border-color: rgba(76, 175, 239, 0.28);
+        filter: saturate(1.06) contrast(1.02);
+
+        box-shadow:
+          0 18px 44px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(76, 175, 239, 0.1),
+          0 0 18px rgba(76, 175, 239, 0.32),
+          0 0 52px rgba(76, 239, 161, 0.1);
+      }
+
+      .card-link:hover .card::before,
+      .card-link:focus-visible .card::before {
+        opacity: 1;
+        animation: shimmer 1.15s ease forwards;
+      }
+
+      .card-link:hover .card::after,
+      .card-link:focus-visible .card::after {
+        opacity: 0.95;
+        filter: drop-shadow(0 0 10px rgba(76, 175, 239, 0.5));
+      }
+
+      .card-link:hover .card-title,
+      .card-link:focus-visible .card-title {
+        transform: translateX(2px);
+      }
+
+      .card-link:hover .card-icon,
+      .card-link:focus-visible .card-icon {
+        transform: translateY(-1px) scale(1.03);
+        border-color: rgba(76, 175, 239, 0.25);
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-70%) rotate(8deg);
+        }
+        100% {
+          transform: translateX(70%) rotate(8deg);
+        }
+      }
+
+      /* =========================
+         BANNER CARD
+      ========================== */
       .banner-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -85,19 +332,19 @@
       }
 
       .card.banner {
-        padding: 18px;
-        border-radius: 14px;
+        padding: 18px 18px 18px 30px;
+        border-radius: 20px;
         background: linear-gradient(
           135deg,
-          rgba(76, 175, 239, 0.15),
+          rgba(76, 175, 239, 0.18),
           rgba(76, 239, 161, 0.08)
         );
         border: 1px solid rgba(76, 175, 239, 0.22);
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
       }
 
-      .card.banner a {
-        font-size: 1.25rem;
+      .card.banner .card-title {
+        font-size: 1.22rem;
       }
 
       .card.banner p {
@@ -106,17 +353,18 @@
         max-width: 980px;
       }
 
-      /* Small label / badge */
+      /* =========================
+         BADGES
+      ========================== */
       .badge {
         display: inline-block;
         font-size: 0.75rem;
         padding: 5px 9px;
         border-radius: 999px;
-        margin-left: 10px;
-        vertical-align: middle;
         background: rgba(255, 255, 255, 0.08);
         color: #ddd;
         border: 1px solid rgba(255, 255, 255, 0.12);
+        letter-spacing: 0.2px;
       }
 
       .badge.soon {
@@ -125,15 +373,34 @@
         color: #ffd36d;
       }
 
-      .card.disabled {
-        opacity: 0.85;
+      .badge.mobile {
+        background: rgba(76, 175, 239, 0.12);
+        border-color: rgba(76, 175, 239, 0.22);
+        color: #8fd2ff;
       }
 
-      .divider {
-        height: 1px;
+      .badge.desktop {
+        background: rgba(156, 39, 176, 0.12);
+        border-color: rgba(156, 39, 176, 0.22);
+        color: #e2a8ff;
+      }
+
+      .badge.game {
+        background: rgba(76, 239, 161, 0.1);
+        border-color: rgba(76, 239, 161, 0.2);
+        color: #9fffd0;
+      }
+
+      .badge.proto {
         background: rgba(255, 255, 255, 0.08);
-        margin: 22px 0 12px;
-        border-radius: 999px;
+        border-color: rgba(255, 255, 255, 0.12);
+        color: #ddd;
+      }
+
+      .badge.ready {
+        background: rgba(0, 200, 83, 0.14);
+        border-color: rgba(0, 200, 83, 0.24);
+        color: #b6ffcf;
       }
 
       .footer-note {
@@ -147,7 +414,12 @@
       }
     </style>
   </head>
+
   <body>
+    <!-- Random particle background -->
+    <canvas id="space"></canvas>
+    <div class="scanlines"></div>
+
     <h1>Creative Dojo</h1>
     <div class="subtitle">Development Training Grounds</div>
 
@@ -160,34 +432,84 @@
       </div>
 
       <div class="card-container">
-        <div class="card">
-          <a href="List.html">Lists App</a>
-          <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
-        </div>
+        <a class="card-link" href="List.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">📋</div>
+              <div class="card-title">Lists App</div>
+            </div>
+            <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
+            <div class="card-meta">
+              <span class="badge ready">Stable</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge proto">Tool</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card">
-          <a href="Journal.html">Daily Journal</a>
-          <p>A lightweight daily journal for writing and progress tracking.</p>
-        </div>
+        <a class="card-link" href="Journal.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">📓</div>
+              <div class="card-title">Daily Journal</div>
+            </div>
+            <p>
+              A lightweight daily journal for writing and progress tracking.
+            </p>
+            <div class="card-meta">
+              <span class="badge ready">Ready</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge proto">Tool</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card">
-          <a href="PixelSpriteEditor.html">Pixel Sprite Editor</a>
-          <p>Create pixel art sprites for games, icons, and spritesheets.</p>
-        </div>
+        <a class="card-link" href="PixelSpriteEditor.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🎨</div>
+              <div class="card-title">Pixel Sprite Editor</div>
+            </div>
+            <p>Create pixel art sprites for games, icons, and spritesheets.</p>
+            <div class="card-meta">
+              <span class="badge proto">Tool</span>
+              <span class="badge desktop">Desktop</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card">
-          <a href="Beatpad.html">Web Audio Beatpad</a>
-          <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
-        </div>
+        <a class="card-link" href="Beatpad.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🎛️</div>
+              <div class="card-title">Web Audio Beatpad</div>
+            </div>
+            <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
+            <div class="card-meta">
+              <span class="badge proto">Prototype</span>
+              <span class="badge desktop">Desktop</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card disabled">
-          <a href="#" onclick="return false;">Particle Engine</a>
-          <span class="badge soon">Coming Soon</span>
-          <p>
-            A reusable FX system for impact sparks, healing glow, and
-            UI/gameplay polish.
-          </p>
-        </div>
+        <!-- ParticleEngine is ready, but we keep the pretty badge style -->
+        <a class="card-link" href="ParticleEngine.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">✨</div>
+              <div class="card-title">Particle Engine</div>
+            </div>
+            <p>
+              A reusable FX system for impact sparks, healing glow, and
+              UI/gameplay polish.
+            </p>
+            <div class="card-meta">
+              <span class="badge soon">Coming Soon</span>
+              <span class="badge proto">System</span>
+              <span class="badge desktop">Desktop</span>
+            </div>
+          </div>
+        </a>
       </div>
     </div>
 
@@ -201,59 +523,141 @@
       </div>
 
       <div class="banner-grid">
-        <div class="card banner">
-          <a href="TopDown.html">Top-Down RPG + ATB / Paradigm Combat</a>
-          <p>
-            A mobile-first top-down RPG prototype built in vanilla JavaScript.
-            Explore a field scene with joystick controls and random encounters.
-            Battles switch into an ATB-based “paradigm combat” system where
-            party roles can be shifted under time pressure.
-          </p>
-        </div>
+        <a class="card-link" href="TopDown.html">
+          <div class="card banner">
+            <div class="card-title-row">
+              <div class="card-icon">🗺️</div>
+              <div class="card-title">Top-Down RPG + ATB / Paradigm Combat</div>
+            </div>
+            <p>
+              A mobile-first top-down RPG prototype built in vanilla JavaScript.
+              Explore a field scene with joystick controls and random
+              encounters. Battles switch into an ATB-based “paradigm combat”
+              system where party roles can be shifted under time pressure.
+            </p>
+            <div class="card-meta">
+              <span class="badge soon">Flagship</span>
+              <span class="badge mobile">Mobile</span>
+              <span class="badge proto">Prototype</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card">
-          <a href="FF13 3v1.html">ATB Combat Prototype</a>
-          <p>
-            Standalone battle module used by the main game (3v1 encounter
-            prototype).
-          </p>
-        </div>
+        <a class="card-link" href="FF13 3v1.html">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">⚔️</div>
+              <div class="card-title">ATB Combat Prototype</div>
+            </div>
+            <p>
+              Standalone battle module used by the main game (3v1 encounter
+              prototype).
+            </p>
+            <div class="card-meta">
+              <span class="badge proto">Combat</span>
+              <span class="badge desktop">Desktop</span>
+            </div>
+          </div>
+        </a>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- HONORABLE MENTIONS / LAB -->
+    <!-- SIDE QUESTS -->
     <div class="section">
-      <div class="section-title">Honorable Mentions (Lab)</div>
+      <div class="section-title">Side Quests (Minigames + Experiments)</div>
       <div class="section-subtitle">
-        Extra prototypes and experiments I’ve built while learning and
-        iterating.
+        Smaller projects that sharpen mechanics, UI, and game-feel. These are
+        part of the dojo too.
       </div>
 
-      <div class="card-container">
-        <!-- Add back any additional links you want to keep visible -->
-        <!-- Example placeholders below. Uncomment and adjust if you want them shown here. -->
+      <div class="filterbar" id="filterbar">
+        <span class="filter-label">Filter:</span>
 
-        <!--
-      <div class="card">
-        <a href="threejsWizardryMobile.html">3D Dungeon Crawler Demo (Three.js)</a>
-        <p>3D grid-based dungeon movement prototype (mobile controls).</p>
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="mobile">Mobile</button>
+        <button class="filter-btn" data-filter="desktop">Desktop</button>
+        <button class="filter-btn" data-filter="minigame">Minigame</button>
+        <button class="filter-btn" data-filter="prototype">Prototype</button>
+
+        <span class="filter-count" id="filterCount"></span>
       </div>
 
-      <div class="card">
-        <a href="turn_based_rpg.html">Turn-Based RPG Combat Demo</a>
-        <p>Turn-based battle prototype with UI experimentation.</p>
-      </div>
-      -->
+      <div class="card-container" id="sideQuestGrid">
+        <a
+          class="card-link"
+          href="PocketDodge.html"
+          data-tags="mobile minigame prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🕹️</div>
+              <div class="card-title">Pocket Dodge</div>
+            </div>
+            <p>
+              Mobile joystick minigame: dodge hazards, collect stars, survive.
+            </p>
+            <div class="card-meta">
+              <span class="badge ready">Playable</span>
+              <span class="badge mobile">Mobile</span>
+              <span class="badge game">Minigame</span>
+            </div>
+          </div>
+        </a>
 
-        <div class="card">
-          <a href="#" onclick="return false;">(Add more here)</a>
-          <p>
-            Use this section for older/extra projects you want to keep on the
-            site without distracting from the main focus.
-          </p>
-        </div>
+        <a
+          class="card-link"
+          href="Shmup.html"
+          data-tags="mobile minigame prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🚀</div>
+              <div class="card-title">Mobile Shmup</div>
+            </div>
+            <p>Canvas shoot-em-up with waves, lives, and touch controls.</p>
+            <div class="card-meta">
+              <span class="badge proto">Prototype</span>
+              <span class="badge mobile">Mobile</span>
+              <span class="badge game">Arcade</span>
+            </div>
+          </div>
+        </a>
+
+        <a class="card-link" href="Blackjack.html" data-tags="desktop minigame">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🃏</div>
+              <div class="card-title">Blackjack</div>
+            </div>
+            <p>Vanilla JS blackjack with keyboard shortcuts and clean UI.</p>
+            <div class="card-meta">
+              <span class="badge ready">Ready</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge game">Card Game</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="Slots.html"
+          data-tags="desktop minigame prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🎰</div>
+              <div class="card-title">Slot Machine</div>
+            </div>
+            <p>Simple slot machine with async reel spins and win states.</p>
+            <div class="card-meta">
+              <span class="badge ready">Ready</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge game">Luck</span>
+            </div>
+          </div>
+        </a>
       </div>
     </div>
 
@@ -262,5 +666,197 @@
         <strong>Design rules:</strong> Local-first · Single-file · No backend.
       </p>
     </div>
+
+    <!-- Random Canvas Stars -->
+    <script>
+      (() => {
+        const canvas = document.getElementById("space");
+        const ctx = canvas.getContext("2d");
+
+        let W = 0,
+          H = 0,
+          DPR = 1;
+        const layers = [];
+
+        function resize() {
+          DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+          W = window.innerWidth;
+          H = window.innerHeight;
+
+          canvas.width = Math.floor(W * DPR);
+          canvas.height = Math.floor(H * DPR);
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+          build();
+        }
+
+        function rand(a, b) {
+          return a + Math.random() * (b - a);
+        }
+
+        function build() {
+          layers.length = 0;
+
+          const config = [
+            { count: 130, speed: 6, sizeMin: 0.6, sizeMax: 1.6, alpha: 0.55 },
+            { count: 95, speed: 14, sizeMin: 0.8, sizeMax: 2.1, alpha: 0.35 },
+            { count: 65, speed: 26, sizeMin: 1.2, sizeMax: 2.8, alpha: 0.22 },
+          ];
+
+          for (const c of config) {
+            const stars = [];
+            for (let i = 0; i < c.count; i++) {
+              const huePick = Math.random();
+              let tint = "255,255,255";
+              if (huePick < 0.18) tint = "76,175,239";
+              else if (huePick < 0.26) tint = "76,239,161";
+              else if (huePick < 0.29) tint = "175,76,239";
+
+              stars.push({
+                x: rand(0, W),
+                y: rand(0, H),
+                r: rand(c.sizeMin, c.sizeMax),
+                v: rand(c.speed * 0.6, c.speed * 1.4),
+                a: rand(c.alpha * 0.6, c.alpha * 1.0),
+                tint,
+              });
+            }
+            layers.push(stars);
+          }
+        }
+
+        function drawBg() {
+          ctx.fillStyle = "#0b0b0f";
+          ctx.fillRect(0, 0, W, H);
+
+          const g1 = ctx.createRadialGradient(
+            W * 0.2,
+            H * 0.12,
+            0,
+            W * 0.2,
+            H * 0.12,
+            640,
+          );
+          g1.addColorStop(0, "rgba(76,175,239,0.14)");
+          g1.addColorStop(1, "rgba(0,0,0,0)");
+
+          const g2 = ctx.createRadialGradient(
+            W * 0.78,
+            H * 0.3,
+            0,
+            W * 0.78,
+            H * 0.3,
+            520,
+          );
+          g2.addColorStop(0, "rgba(76,239,161,0.09)");
+          g2.addColorStop(1, "rgba(0,0,0,0)");
+
+          const g3 = ctx.createRadialGradient(
+            W * 0.55,
+            H * 0.95,
+            0,
+            W * 0.55,
+            H * 0.95,
+            600,
+          );
+          g3.addColorStop(0, "rgba(175,76,239,0.07)");
+          g3.addColorStop(1, "rgba(0,0,0,0)");
+
+          ctx.fillStyle = g1;
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = g2;
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = g3;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        let last = performance.now();
+        function tick(now) {
+          const dt = Math.min(0.033, (now - last) / 1000);
+          last = now;
+
+          drawBg();
+
+          for (let li = 0; li < layers.length; li++) {
+            const stars = layers[li];
+            for (const s of stars) {
+              s.y += s.v * dt;
+              if (s.y > H + 10) {
+                s.y = -10;
+                s.x = rand(0, W);
+              }
+
+              ctx.beginPath();
+              ctx.fillStyle = `rgba(${s.tint},${s.a})`;
+              ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          requestAnimationFrame(tick);
+        }
+
+        window.addEventListener("resize", resize, { passive: true });
+        resize();
+        requestAnimationFrame(tick);
+      })();
+    </script>
+
+    <!-- Filter Script -->
+    <script>
+      (() => {
+        const buttons = Array.from(document.querySelectorAll(".filter-btn"));
+        const cards = Array.from(
+          document.querySelectorAll("#sideQuestGrid .card-link"),
+        );
+        const countEl = document.getElementById("filterCount");
+
+        function setActive(btn) {
+          buttons.forEach((b) => b.classList.toggle("active", b === btn));
+        }
+
+        function matchesFilter(card, filter) {
+          if (filter === "all") return true;
+
+          const tags = (card.dataset.tags || "")
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+
+          const map = {
+            mobile: "mobile",
+            desktop: "desktop",
+            minigame: "minigame",
+            prototype: "prototype",
+          };
+
+          return tags.includes(map[filter] || filter);
+        }
+
+        function applyFilter(filter) {
+          let shown = 0;
+
+          cards.forEach((card) => {
+            const show = matchesFilter(card, filter);
+            card.classList.toggle("hidden", !show);
+            if (show) shown++;
+          });
+
+          countEl.textContent = `${shown}/${cards.length} shown`;
+        }
+
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const filter = btn.dataset.filter || "all";
+            setActive(btn);
+            applyFilter(filter);
+          });
+        });
+
+        applyFilter("all");
+      })();
+    </script>
   </body>
 </html>
