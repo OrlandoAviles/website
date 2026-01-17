@@ -82,7 +82,6 @@
         overflow-wrap: anywhere;
       }
 
-      /* Pencil icon only appears on hover/focus */
       .edit-icon {
         width: 34px;
         height: 34px;
@@ -119,7 +118,6 @@
         user-select: none;
       }
 
-      /* Title input (animated pop) */
       #listTitleInput {
         display: none;
         width: min(420px, 100%);
@@ -281,8 +279,42 @@
       }
 
       /* ----------------------------
-       Mobile
+       Undo Toast
     ---------------------------- */
+
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.86);
+        padding: 12px 14px;
+        border-radius: 14px;
+        display: none;
+        gap: 12px;
+        align-items: center;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+        z-index: 2000;
+        max-width: min(520px, 92vw);
+      }
+
+      #toastText {
+        font-size: 14px;
+        opacity: 0.95;
+        user-select: none;
+        overflow-wrap: anywhere;
+      }
+
+      #undoBtn {
+        background: rgba(255, 255, 255, 0.12);
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-weight: 800;
+      }
+
+      #undoBtn:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
 
       @media (max-width: 480px) {
         #listTitle {
@@ -302,7 +334,7 @@
         }
         .edit-icon {
           opacity: 1;
-        } /* always show pencil on tiny screens */
+        }
       }
     </style>
   </head>
@@ -350,6 +382,12 @@
       </div>
     </div>
 
+    <!-- Undo toast -->
+    <div id="toast" role="status" aria-live="polite">
+      <div id="toastText">Item deleted</div>
+      <button id="undoBtn" type="button">Undo</button>
+    </div>
+
     <script>
       /* ------------------------
        State & Storage Helpers
@@ -368,6 +406,64 @@
       function normalizeName(name) {
         return name.trim().replace(/\s+/g, " ");
       }
+
+      /* ------------------------
+       Undo System
+    ------------------------ */
+
+      const toast = document.getElementById("toast");
+      const toastText = document.getElementById("toastText");
+      const undoBtn = document.getElementById("undoBtn");
+
+      let undoState = null; // { listName, index, value }
+      let toastTimer = null;
+
+      function showToast(message, undoPayload) {
+        toastText.textContent = message;
+        toast.style.display = "flex";
+
+        undoState = undoPayload;
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          hideToast();
+        }, 5200);
+      }
+
+      function hideToast() {
+        toast.style.display = "none";
+        undoState = null;
+        clearTimeout(toastTimer);
+        toastTimer = null;
+      }
+
+      function performUndo() {
+        if (!undoState) return;
+
+        const lists = getLists();
+        const { listName, index, value } = undoState;
+
+        lists[listName] = lists[listName] || [];
+
+        const safeIndex = Math.max(0, Math.min(index, lists[listName].length));
+        lists[listName].splice(safeIndex, 0, value);
+
+        saveLists(lists);
+        hideToast();
+        loadList();
+      }
+
+      undoBtn.addEventListener("click", performUndo);
+
+      document.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && key === "z") {
+          if (undoState) {
+            e.preventDefault();
+            performUndo();
+          }
+        }
+      });
 
       /* ------------------------
        Core Renderer
@@ -411,8 +507,17 @@
 
       function removeListItem(index) {
         const lists = getLists();
-        lists[currentList].splice(index, 1);
+        lists[currentList] = lists[currentList] || [];
+
+        const removed = lists[currentList].splice(index, 1)[0];
         saveLists(lists);
+
+        showToast("Item deleted", {
+          listName: currentList,
+          index,
+          value: removed,
+        });
+
         loadList();
       }
 
@@ -502,8 +607,8 @@
         titleHint.style.display = "none";
 
         titleInput.style.display = "block";
-        titleInput.classList.remove("pop-in"); // restart animation
-        void titleInput.offsetWidth; // force reflow
+        titleInput.classList.remove("pop-in");
+        void titleInput.offsetWidth;
         titleInput.classList.add("pop-in");
 
         titleInput.value = currentList;
@@ -513,12 +618,10 @@
 
       function cancelRename() {
         renaming = false;
-
         titleInput.style.display = "none";
         titleBtn.style.display = "inline-block";
         editTitleBtn.style.display = "grid";
         titleHint.style.display = "block";
-
         titleInput.value = "";
       }
 
