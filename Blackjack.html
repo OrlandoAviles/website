@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blackjack (Vanilla JS)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1410;
+      --panel: #0f1f18;
+      --card: #13261e;
+      --text: #e9f3ee;
+      --muted: #b8c7bf;
+      --accent: #62d6a7;
+      --danger: #ff6b6b;
+      --shadow: rgba(0,0,0,.35);
+      --radius: 16px;
+      --gap: 12px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 600px at 30% 10%, #103322 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .app {
+      width: min(920px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 40px var(--shadow);
+      overflow: hidden;
+    }
+    header {
+      padding: 18px 18px 10px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--gap);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.12);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: .4px;
+    }
+    header .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-left: 8px;
+    }
+    .topline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.15);
+    }
+    main {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .table {
+      display: grid;
+      gap: 16px;
+    }
+    .row {
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .row h2 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .hand {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      min-height: 54px;
+    }
+    .card {
+      width: 72px;
+      height: 96px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.1));
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      position: relative;
+      user-select: none;
+    }
+    .card .big {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .card .small {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      font-size: 12px;
+      color: rgba(233,243,238,.85);
+    }
+    .card.red { color: #ffb3b3; }
+    .card.black { color: #d7e6df; }
+    .card.back {
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(98,214,167,.22),
+        rgba(98,214,167,.22) 8px,
+        rgba(0,0,0,.12) 8px,
+        rgba(0,0,0,.12) 16px
+      );
+    }
+    .scoreline {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .scoreline strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+    .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 650;
+      letter-spacing: .2px;
+      cursor: pointer;
+      transition: transform .06s ease, background .15s ease, opacity .15s ease;
+    }
+    button:hover { background: rgba(255,255,255,.10); }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      border-color: rgba(98,214,167,.35);
+      background: rgba(98,214,167,.18);
+    }
+    button.danger {
+      border-color: rgba(255,107,107,.35);
+      background: rgba(255,107,107,.16);
+    }
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      max-width: 52ch;
+    }
+    .status b { color: var(--text); }
+    footer {
+      padding: 14px 18px 18px;
+      color: rgba(233,243,238,.55);
+      font-size: 12px;
+    }
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      color: rgba(233,243,238,.85);
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Blackjack">
+    <header>
+      <div>
+        <h1>Blackjack <span class="sub">Vanilla JS</span></h1>
+      </div>
+      <div class="topline">
+        <div class="pill">Shortcuts: <kbd>H</kbd> Hit • <kbd>S</kbd> Stand • <kbd>N</kbd> New Hand</div>
+        <div class="pill">Wins: <span id="wins">0</span> • Losses: <span id="losses">0</span> • Pushes: <span id="pushes">0</span></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="table">
+        <div class="row">
+          <h2>Dealer</h2>
+          <div class="hand" id="dealerHand" aria-label="Dealer hand"></div>
+          <div class="scoreline">
+            <span>Score:</span>
+            <strong id="dealerScore">?</strong>
+            <span id="dealerHint"></span>
+          </div>
+        </div>
+
+        <div class="row">
+          <h2>You</h2>
+          <div class="hand" id="playerHand" aria-label="Player hand"></div>
+          <div class="scoreline">
+            <span>Score:</span>
+            <strong id="playerScore">0</strong>
+            <span id="playerHint"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="buttons">
+          <button id="btnNew" class="primary">New Hand</button>
+          <button id="btnHit">Hit</button>
+          <button id="btnStand">Stand</button>
+          <button id="btnReveal" class="danger">Reveal / Settle</button>
+        </div>
+        <div class="status" id="status">
+          Click <b>New Hand</b> to deal. Dealer hits to 17 (stands on soft 17).
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Rules: dealer draws to 17, aces auto-adjust. No splitting/doubling in this simple version.
+    </footer>
+  </div>
+
+  <script>
+    // ---------- Blackjack (single file) ----------
+    const SUITS = [
+      { s: "♠", color: "black" },
+      { s: "♥", color: "red" },
+      { s: "♦", color: "red" },
+      { s: "♣", color: "black" },
+    ];
+    const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+
+    function makeDeck() {
+      const deck = [];
+      for (const suit of SUITS) {
+        for (const rank of RANKS) {
+          deck.push({ rank, suit: suit.s, color: suit.color });
+        }
+      }
+      return deck;
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function cardValue(rank) {
+      if (rank === "A") return 11;
+      if (rank === "K" || rank === "Q" || rank === "J") return 10;
+      return Number(rank);
+    }
+
+    function handTotals(hand) {
+      // returns best total <= 21 if possible, else lowest total
+      let total = 0;
+      let aces = 0;
+      for (const c of hand) {
+        total += cardValue(c.rank);
+        if (c.rank === "A") aces++;
+      }
+      // downgrade aces from 11 to 1 as needed
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+      // soft if any ace counted as 11
+      const isSoft = hand.some(c => c.rank === "A") && total <= 21 && (hand.reduce((t,c)=>t+cardValue(c.rank),0) !== total);
+      return { total, isSoft };
+    }
+
+    // ---------- State ----------
+    let deck = [];
+    let player = [];
+    let dealer = [];
+    let hiddenDealer = true;
+    let roundOver = true;
+
+    const stats = { wins: 0, losses: 0, pushes: 0 };
+
+    // ---------- DOM ----------
+    const elDealerHand = document.getElementById("dealerHand");
+    const elPlayerHand = document.getElementById("playerHand");
+    const elDealerScore = document.getElementById("dealerScore");
+    const elPlayerScore = document.getElementById("playerScore");
+    const elDealerHint = document.getElementById("dealerHint");
+    const elPlayerHint = document.getElementById("playerHint");
+    const elStatus = document.getElementById("status");
+
+    const elWins = document.getElementById("wins");
+    const elLosses = document.getElementById("losses");
+    const elPushes = document.getElementById("pushes");
+
+    const btnNew = document.getElementById("btnNew");
+    const btnHit = document.getElementById("btnHit");
+    const btnStand = document.getElementById("btnStand");
+    const btnReveal = document.getElementById("btnReveal");
+
+    function setStatus(html) {
+      elStatus.innerHTML = html;
+    }
+
+    function ensureDeck() {
+      // infinite shoe feel: reshuffle when low
+      if (deck.length < 15) {
+        deck = shuffle(makeDeck());
+      }
+    }
+
+    function draw() {
+      ensureDeck();
+      return deck.pop();
+    }
+
+    function renderCard(c, faceDown=false) {
+      const div = document.createElement("div");
+      if (faceDown) {
+        div.className = "card back";
+        div.title = "Face down";
+        return div;
+      }
+      div.className = `card ${c.color}`;
+      const small = document.createElement("div");
+      small.className = "small";
+      small.textContent = `${c.rank}${c.suit}`;
+      const big = document.createElement("div");
+      big.className = "big";
+      big.textContent = c.suit;
+      div.appendChild(small);
+      div.appendChild(big);
+      div.title = `${c.rank}${c.suit}`;
+      return div;
+    }
+
+    function renderHands() {
+      elDealerHand.innerHTML = "";
+      elPlayerHand.innerHTML = "";
+
+      dealer.forEach((c, idx) => {
+        const faceDown = hiddenDealer && idx === 0;
+        elDealerHand.appendChild(renderCard(c, faceDown));
+      });
+
+      player.forEach(c => elPlayerHand.appendChild(renderCard(c)));
+
+      // Scores
+      const p = handTotals(player);
+      elPlayerScore.textContent = p.total;
+      elPlayerHint.textContent = p.isSoft ? " (soft)" : "";
+
+      if (hiddenDealer) {
+        // show only upcard score (dealer[1])
+        if (dealer.length === 0) {
+          elDealerScore.textContent = "?";
+          elDealerHint.textContent = "";
+        } else if (dealer.length === 1) {
+          elDealerScore.textContent = "?";
+          elDealerHint.textContent = "";
+        } else {
+          const up = handTotals([dealer[1]]);
+          elDealerScore.textContent = `${up.total} + ?`;
+          elDealerHint.textContent = "";
+        }
+      } else {
+        const d = handTotals(dealer);
+        elDealerScore.textContent = d.total;
+        elDealerHint.textContent = d.isSoft ? " (soft)" : "";
+      }
+    }
+
+    function setButtons() {
+      btnHit.disabled = roundOver;
+      btnStand.disabled = roundOver;
+      btnReveal.disabled = roundOver;
+    }
+
+    function resetRound() {
+      player = [];
+      dealer = [];
+      hiddenDealer = true;
+      roundOver = false;
+      setButtons();
+    }
+
+    function dealInitial() {
+      resetRound();
+      // two each: dealer first card hidden
+      dealer.push(draw(), draw());
+      player.push(draw(), draw());
+
+      renderHands();
+
+      const p = handTotals(player).total;
+      const d = handTotals(dealer).total;
+
+      // Natural blackjack checks
+      if (p === 21 || d === 21) {
+        hiddenDealer = false;
+        renderHands();
+        settle(true);
+      } else {
+        setStatus("Your move: <b>Hit</b> or <b>Stand</b>.");
+      }
+    }
+
+    function playerHit() {
+      if (roundOver) return;
+      player.push(draw());
+      renderHands();
+
+      const p = handTotals(player).total;
+      if (p > 21) {
+        hiddenDealer = false;
+        renderHands();
+        settle();
+      } else if (p === 21) {
+        setStatus("You hit <b>21</b>. Dealer will play out.");
+        dealerPlayAndSettle();
+      } else {
+        setStatus("You drew a card. Still your move.");
+      }
+    }
+
+    function playerStand() {
+      if (roundOver) return;
+      setStatus("You stand. Dealer's turn.");
+      dealerPlayAndSettle();
+    }
+
+    function dealerPlayAndSettle() {
+      hiddenDealer = false;
+      renderHands();
+
+      // Dealer hits to 17; stands on soft 17 (as noted).
+      while (true) {
+        const d = handTotals(dealer);
+        if (d.total < 17) {
+          dealer.push(draw());
+          renderHands();
+          continue;
+        }
+        // stands on 17 including soft 17
+        break;
+      }
+      settle();
+    }
+
+    function settle(fromNatural=false) {
+      hiddenDealer = false;
+      renderHands();
+
+      const p = handTotals(player).total;
+      const d = handTotals(dealer).total;
+
+      roundOver = true;
+      setButtons();
+
+      let result = "";
+      if (p > 21) {
+        stats.losses++;
+        result = "You busted. <b>Dealer wins</b>.";
+      } else if (d > 21) {
+        stats.wins++;
+        result = "Dealer busted. <b>You win</b>.";
+      } else if (p > d) {
+        stats.wins++;
+        result = fromNatural && p === 21 && player.length === 2
+          ? "<b>Blackjack!</b> You win."
+          : "<b>You win</b>.";
+      } else if (p < d) {
+        stats.losses++;
+        result = "Dealer wins.";
+      } else {
+        stats.pushes++;
+        result = "<b>Push</b> (tie).";
+      }
+
+      elWins.textContent = stats.wins;
+      elLosses.textContent = stats.losses;
+      elPushes.textContent = stats.pushes;
+
+      setStatus(`${result} Click <b>New Hand</b> to play again.`);
+    }
+
+    function revealAndSettle() {
+      if (roundOver) return;
+      setStatus("Revealing and settling…");
+      dealerPlayAndSettle();
+    }
+
+    // ---------- Events ----------
+    btnNew.addEventListener("click", dealInitial);
+    btnHit.addEventListener("click", playerHit);
+    btnStand.addEventListener("click", playerStand);
+    btnReveal.addEventListener("click", revealAndSettle);
+
+    window.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+      if (key === "n") dealInitial();
+      if (key === "h") playerHit();
+      if (key === "s") playerStand();
+    });
+
+    // Initial boot
+    deck = shuffle(makeDeck());
+    renderHands();
+    setButtons();
+    setStatus('Click <b>New Hand</b> to deal. Dealer hits to 17 (stands on soft 17).');
+  </script>
+</body>
+</html>
