@@ -90,10 +90,11 @@
         max-width: 900px;
       }
 
+      /* IMPORTANT: give the cards "breathing room" like your original file */
       .card-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
       }
 
       .divider {
@@ -178,7 +179,8 @@
         position: relative;
         overflow: hidden;
 
-        padding: 16px 16px 16px 28px;
+        /* IMPORTANT FIX: reserve space so star never touches title */
+        padding: 16px 56px 16px 28px;
 
         border-radius: 18px;
         background: rgba(30, 30, 30, 0.82);
@@ -332,7 +334,7 @@
       }
 
       .card.banner {
-        padding: 18px 18px 18px 30px;
+        padding: 18px 56px 18px 30px;
         border-radius: 20px;
         background: linear-gradient(
           135deg,
@@ -403,6 +405,13 @@
         color: #b6ffcf;
       }
 
+      /* NEW: tool badge (real badge again) */
+      .badge.tool {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(76, 175, 239, 0.24);
+        color: #bfe8ff;
+      }
+
       .footer-note {
         margin-top: 30px;
         color: #999;
@@ -411,6 +420,123 @@
 
       .footer-note strong {
         color: #ddd;
+      }
+
+      /* =========================
+         BOOKMARKS SHELF (Netflix)
+      ========================== */
+      .bookmark-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0 14px;
+      }
+
+      .reset-btn {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #eee;
+        padding: 8px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        transition:
+          transform 0.08s ease,
+          background 0.15s ease,
+          border-color 0.15s ease;
+        user-select: none;
+      }
+
+      .reset-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 193, 7, 0.25);
+      }
+
+      .reset-btn:active {
+        transform: translateY(1px);
+      }
+
+      .drag-hint {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.52);
+      }
+
+      .bookmark-shelf {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 18px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* same silhouette as normal cards, just shelf scrolling */
+      .bookmark-item {
+        flex: 0 0 auto;
+        width: clamp(280px, 26vw, 340px);
+      }
+
+      .bookmark-shelf::-webkit-scrollbar {
+        height: 8px;
+      }
+      .bookmark-shelf::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+      }
+
+      .bookmark-item.dragging {
+        opacity: 0.55;
+        transform: scale(0.985);
+      }
+
+      /* =========================
+         BOOKMARK STAR BUTTON
+      ========================== */
+      .bookmark-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.28);
+        color: rgba(255, 255, 255, 0.75);
+
+        display: grid;
+        place-items: center;
+
+        cursor: pointer;
+        z-index: 4;
+
+        transition:
+          transform 0.12s ease,
+          background 0.2s ease,
+          border-color 0.2s ease,
+          color 0.2s ease;
+      }
+
+      .bookmark-btn:hover {
+        transform: translateY(-1px) scale(1.03);
+        border-color: rgba(76, 175, 239, 0.35);
+        background: rgba(76, 175, 239, 0.12);
+        color: #fff;
+      }
+
+      .bookmark-btn:active {
+        transform: translateY(0px) scale(0.98);
+      }
+
+      .bookmark-btn.active {
+        border-color: rgba(255, 193, 7, 0.45);
+        background: rgba(255, 193, 7, 0.14);
+        color: #ffd36d;
+        box-shadow: 0 0 18px rgba(255, 193, 7, 0.18);
       }
     </style>
   </head>
@@ -423,103 +549,31 @@
     <h1>Creative Dojo</h1>
     <div class="subtitle">Development Training Grounds</div>
 
-    <!-- DEV TOOLS -->
-    <div class="section">
-      <div class="section-title">Dev Tools</div>
+    <!-- BOOKMARKED APPS -->
+    <div class="section" id="bookmarksSection">
+      <div class="section-title">Bookmarked Apps</div>
       <div class="section-subtitle">
-        Small, focused utilities that support my flagship RPG development and
-        help me practice building systems.
+        Bookmark apps from Featured Apps below. Drag to reorder your shelf.
       </div>
 
-      <div class="card-container">
-        <a class="card-link" href="List.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">📋</div>
-              <div class="card-title">Lists App</div>
-            </div>
-            <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
-            <div class="card-meta">
-              <span class="badge ready">Stable</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge proto">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a class="card-link" href="Journal.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">📓</div>
-              <div class="card-title">Daily Journal</div>
-            </div>
-            <p>
-              A lightweight daily journal for writing and progress tracking.
-            </p>
-            <div class="card-meta">
-              <span class="badge ready">Ready</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge proto">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a class="card-link" href="PixelSpriteEditor.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🎨</div>
-              <div class="card-title">Pixel Sprite Editor</div>
-            </div>
-            <p>Create pixel art sprites for games, icons, and spritesheets.</p>
-            <div class="card-meta">
-              <span class="badge proto">Tool</span>
-              <span class="badge desktop">Desktop</span>
-            </div>
-          </div>
-        </a>
-
-        <a class="card-link" href="Beatpad.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🎛️</div>
-              <div class="card-title">Web Audio Beatpad</div>
-            </div>
-            <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
-            <div class="card-meta">
-              <span class="badge proto">Prototype</span>
-              <span class="badge desktop">Desktop</span>
-            </div>
-          </div>
-        </a>
-
-        <!-- ParticleEngine is ready, but we keep the pretty badge style -->
-        <a class="card-link" href="ParticleEngine.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">✨</div>
-              <div class="card-title">Particle Engine</div>
-            </div>
-            <p>
-              A reusable FX system for impact sparks, healing glow, and
-              UI/gameplay polish.
-            </p>
-            <div class="card-meta">
-              <span class="badge soon">Coming Soon</span>
-              <span class="badge proto">System</span>
-              <span class="badge desktop">Desktop</span>
-            </div>
-          </div>
-        </a>
+      <div class="bookmark-toolbar">
+        <button class="reset-btn" id="resetBookmarksBtn">
+          Reset to Orlando defaults
+        </button>
+        <span class="drag-hint">Tip: drag cards to reorder</span>
+        <span class="filter-count" id="bookmarkCount"></span>
       </div>
+
+      <div class="bookmark-shelf" id="bookmarkShelf"></div>
     </div>
 
-    <div class="divider"></div>
+    <div class="divider" id="bookmarkDivider"></div>
 
-    <!-- MAIN GAME -->
+    <!-- FLAGSHIP -->
     <div class="section">
-      <div class="section-title">Main Game</div>
+      <div class="section-title">Flagship Game</div>
       <div class="section-subtitle">
-        One core project. Everything else is a tool that strengthens it.
+        One core project. Everything else is practice that strengthens it.
       </div>
 
       <div class="banner-grid">
@@ -564,18 +618,20 @@
 
     <div class="divider"></div>
 
-    <!-- SIDE QUESTS -->
+    <!-- FEATURED APPS -->
     <div class="section">
-      <div class="section-title">Side Quests (Minigames + Experiments)</div>
+      <div class="section-title">Featured Apps</div>
       <div class="section-subtitle">
-        Smaller projects that sharpen mechanics, UI, and game-feel. These are
-        part of the dojo too.
+        Tools, minigames, and experiments. Bookmark from here to pin your
+        favorites above.
       </div>
 
       <div class="filterbar" id="filterbar">
         <span class="filter-label">Filter:</span>
 
         <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
+        <button class="filter-btn" data-filter="tool">Tool</button>
         <button class="filter-btn" data-filter="mobile">Mobile</button>
         <button class="filter-btn" data-filter="desktop">Desktop</button>
         <button class="filter-btn" data-filter="minigame">Minigame</button>
@@ -584,10 +640,119 @@
         <span class="filter-count" id="filterCount"></span>
       </div>
 
-      <div class="card-container" id="sideQuestGrid">
+      <div class="card-container" id="featuredGrid">
+        <!-- Tools -->
+        <a
+          class="card-link"
+          href="List.html"
+          data-app="list"
+          data-tags="desktop tool stable"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">📋</div>
+              <div class="card-title">Lists App</div>
+            </div>
+            <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
+            <div class="card-meta">
+              <span class="badge ready">Stable</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="Journal.html"
+          data-app="journal"
+          data-tags="desktop tool stable"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">📓</div>
+              <div class="card-title">Daily Journal</div>
+            </div>
+            <p>
+              A lightweight daily journal for writing and progress tracking.
+            </p>
+            <div class="card-meta">
+              <span class="badge ready">Ready</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="PixelSpriteEditor.html"
+          data-app="sprite"
+          data-tags="desktop tool prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🎨</div>
+              <div class="card-title">Pixel Sprite Editor</div>
+            </div>
+            <p>Create pixel art sprites for games, icons, and spritesheets.</p>
+            <div class="card-meta">
+              <span class="badge proto">Prototype</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="Beatpad.html"
+          data-app="beatpad"
+          data-tags="desktop tool prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🎛️</div>
+              <div class="card-title">Web Audio Beatpad</div>
+            </div>
+            <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
+            <div class="card-meta">
+              <span class="badge proto">Prototype</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="ParticleEngine.html"
+          data-app="particles"
+          data-tags="desktop tool prototype"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">✨</div>
+              <div class="card-title">Particle Engine</div>
+            </div>
+            <p>
+              A reusable FX system for impact sparks, healing glow, and
+              UI/gameplay polish.
+            </p>
+            <div class="card-meta">
+              <span class="badge soon">Coming Soon</span>
+              <span class="badge proto">System</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Games -->
         <a
           class="card-link"
           href="PocketDodge.html"
+          data-app="pocketdodge"
           data-tags="mobile minigame prototype"
         >
           <div class="card">
@@ -609,6 +774,7 @@
         <a
           class="card-link"
           href="Shmup.html"
+          data-app="shmup"
           data-tags="mobile minigame prototype"
         >
           <div class="card">
@@ -625,7 +791,12 @@
           </div>
         </a>
 
-        <a class="card-link" href="Blackjack.html" data-tags="desktop minigame">
+        <a
+          class="card-link"
+          href="Blackjack.html"
+          data-app="blackjack"
+          data-tags="desktop minigame"
+        >
           <div class="card">
             <div class="card-title-row">
               <div class="card-icon">🃏</div>
@@ -643,6 +814,7 @@
         <a
           class="card-link"
           href="Slots.html"
+          data-app="slots"
           data-tags="desktop minigame prototype"
         >
           <div class="card">
@@ -804,58 +976,229 @@
       })();
     </script>
 
-    <!-- Filter Script -->
+    <!-- Featured Filters + Bookmarking + Drag reorder -->
     <script>
       (() => {
-        const buttons = Array.from(document.querySelectorAll(".filter-btn"));
-        const cards = Array.from(
-          document.querySelectorAll("#sideQuestGrid .card-link"),
+        const STORAGE_KEY = "dojo_bookmarks_v6";
+        const defaultBookmarks = [
+          "particles",
+          "beatpad",
+          "sprite",
+          "pocketdodge",
+        ];
+
+        const bookmarkShelf = document.getElementById("bookmarkShelf");
+        const bookmarksSection = document.getElementById("bookmarksSection");
+        const bookmarkDivider = document.getElementById("bookmarkDivider");
+        const bookmarkCount = document.getElementById("bookmarkCount");
+        const resetBtn = document.getElementById("resetBookmarksBtn");
+
+        const filterButtons = Array.from(
+          document.querySelectorAll(".filter-btn"),
+        );
+        const featuredCards = Array.from(
+          document.querySelectorAll("#featuredGrid .card-link[data-app]"),
         );
         const countEl = document.getElementById("filterCount");
 
-        function setActive(btn) {
-          buttons.forEach((b) => b.classList.toggle("active", b === btn));
+        function loadBookmarks() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return [...defaultBookmarks];
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [...defaultBookmarks];
+            return parsed;
+          } catch {
+            return [...defaultBookmarks];
+          }
         }
 
-        function matchesFilter(card, filter) {
-          if (filter === "all") return true;
+        function saveBookmarks(list) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
 
-          const tags = (card.dataset.tags || "")
+        function bookmarkSet() {
+          return new Set(loadBookmarks());
+        }
+
+        function setBookmarked(appId, yes) {
+          const list = loadBookmarks();
+          const has = list.includes(appId);
+
+          let next = list;
+          if (yes && !has) next = [appId, ...list];
+          if (!yes && has) next = list.filter((x) => x !== appId);
+
+          saveBookmarks(next);
+          renderAll();
+        }
+
+        function ensureBookmarkButton(link) {
+          const appId = link.dataset.app;
+          const card = link.querySelector(".card");
+          if (!appId || !card) return;
+
+          let btn = card.querySelector(".bookmark-btn");
+          if (!btn) {
+            btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "bookmark-btn";
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const set = bookmarkSet();
+              setBookmarked(appId, !set.has(appId));
+            });
+            card.appendChild(btn);
+          }
+        }
+
+        function syncStars() {
+          const set = bookmarkSet();
+
+          featuredCards.forEach((link) => {
+            const appId = link.dataset.app;
+            if (!appId) return;
+
+            ensureBookmarkButton(link);
+
+            const btn = link.querySelector(".bookmark-btn");
+            if (!btn) return;
+
+            const active = set.has(appId);
+            btn.classList.toggle("active", active);
+            btn.innerHTML = active ? "★" : "☆";
+            btn.title = active ? "Remove bookmark" : "Bookmark to top";
+          });
+        }
+
+        function setupDrag(wrapper) {
+          wrapper.setAttribute("draggable", "true");
+
+          wrapper.addEventListener("dragstart", (e) => {
+            wrapper.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", wrapper.dataset.app || "");
+          });
+
+          wrapper.addEventListener("dragend", () => {
+            wrapper.classList.remove("dragging");
+          });
+
+          wrapper.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          });
+
+          wrapper.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const fromId = e.dataTransfer.getData("text/plain");
+            const toId = wrapper.dataset.app;
+            if (!fromId || !toId || fromId === toId) return;
+
+            const list = loadBookmarks().filter(Boolean);
+            const fromIndex = list.indexOf(fromId);
+            const toIndex = list.indexOf(toId);
+            if (fromIndex === -1 || toIndex === -1) return;
+
+            list.splice(fromIndex, 1);
+            list.splice(toIndex, 0, fromId);
+
+            saveBookmarks(list);
+            renderAll();
+          });
+        }
+
+        function renderBookmarksShelf() {
+          const ids = loadBookmarks();
+          const map = new Map();
+          featuredCards.forEach((link) => map.set(link.dataset.app, link));
+
+          const links = ids.map((id) => map.get(id)).filter(Boolean);
+          bookmarkShelf.innerHTML = "";
+
+          if (links.length === 0) {
+            bookmarksSection.style.display = "none";
+            bookmarkDivider.style.display = "none";
+            return;
+          }
+
+          bookmarksSection.style.display = "";
+          bookmarkDivider.style.display = "";
+
+          links.forEach((link) => {
+            const appId = link.dataset.app;
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "bookmark-item";
+            wrapper.dataset.app = appId;
+
+            const clone = link.cloneNode(true);
+            clone.querySelectorAll(".bookmark-btn").forEach((b) => b.remove());
+            clone.classList.remove("hidden");
+
+            wrapper.appendChild(clone);
+            bookmarkShelf.appendChild(wrapper);
+
+            setupDrag(wrapper);
+          });
+
+          bookmarkCount.textContent = `${links.length} pinned`;
+        }
+
+        function getTags(link) {
+          return (link.dataset.tags || "")
             .toLowerCase()
             .split(/\s+/)
             .filter(Boolean);
+        }
 
-          const map = {
-            mobile: "mobile",
-            desktop: "desktop",
-            minigame: "minigame",
-            prototype: "prototype",
-          };
+        function matchesFilter(link, filter) {
+          if (filter === "all") return true;
+          if (filter === "bookmarked")
+            return bookmarkSet().has(link.dataset.app);
+          return getTags(link).includes(filter);
+        }
 
-          return tags.includes(map[filter] || filter);
+        function setActiveFilter(btn) {
+          filterButtons.forEach((b) => b.classList.toggle("active", b === btn));
         }
 
         function applyFilter(filter) {
           let shown = 0;
 
-          cards.forEach((card) => {
-            const show = matchesFilter(card, filter);
-            card.classList.toggle("hidden", !show);
+          featuredCards.forEach((link) => {
+            const show = matchesFilter(link, filter);
+            link.classList.toggle("hidden", !show);
             if (show) shown++;
           });
 
-          countEl.textContent = `${shown}/${cards.length} shown`;
+          countEl.textContent = `${shown}/${featuredCards.length} shown`;
         }
 
-        buttons.forEach((btn) => {
+        function renderAll() {
+          renderBookmarksShelf();
+          syncStars();
+
+          const activeBtn =
+            filterButtons.find((b) => b.classList.contains("active")) ||
+            filterButtons[0];
+          applyFilter(activeBtn?.dataset?.filter || "all");
+        }
+
+        resetBtn.addEventListener("click", () => {
+          saveBookmarks([...defaultBookmarks]);
+          renderAll();
+        });
+
+        filterButtons.forEach((btn) => {
           btn.addEventListener("click", () => {
-            const filter = btn.dataset.filter || "all";
-            setActive(btn);
-            applyFilter(filter);
+            setActiveFilter(btn);
+            applyFilter(btn.dataset.filter || "all");
           });
         });
 
-        applyFilter("all");
+        renderAll();
       })();
     </script>
   </body>
