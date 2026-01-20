@@ -1,311 +1,674 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Top-Down Field + Combat Scene Switch</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Top-Down Field + Inline ATB Combat</title>
 
-<style>
-html, body {
-  height: 100%;
-  margin: 0;
-  background: #0b0e14;
-  overflow: hidden;
-  touch-action: none;
-}
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #0b0e14;
+        overflow: hidden;
+        touch-action: none;
+      }
 
-/* ===== FIELD ===== */
-#wrap {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
+      /* ===== FIELD ===== */
+      #wrap {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
 
-canvas {
-  width: 100vw;
-  height: 100vh;
-  display: block;
-}
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
 
-/* Hint */
-.hint {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color: rgba(255,255,255,.75);
-  background: rgba(0,0,0,.35);
-  padding: 8px 10px;
-  border-radius: 10px;
-  user-select: none;
-  pointer-events: none;
-  z-index: 2;
-}
+      /* Hint */
+      .hint {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        font:
+          12px/1.2 system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial;
+        color: rgba(255, 255, 255, 0.75);
+        background: rgba(0, 0, 0, 0.35);
+        padding: 8px 10px;
+        border-radius: 10px;
+        user-select: none;
+        pointer-events: none;
+        z-index: 2;
+      }
 
-/* ===== COMBAT OVERLAY ===== */
-#combatOverlay {
-  position: fixed;
-  inset: 0;
-  background: black;
-  display: none;
-  z-index: 10;
-}
+      /* ===== COMBAT OVERLAY ===== */
+      #combatOverlay {
+        position: fixed;
+        inset: 0;
+        background: black;
+        display: none;
+        z-index: 10;
+      }
 
-#combatFrame {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-</style>
-</head>
+      /* ================= COMBAT UI (merged) ================= */
+      /* ===== GLOBAL ===== */
 
-<body>
+      /* ===== GAME CONTAINER ===== */
+      #game {
+        max-width: 480px;
+        width: 100%;
+        padding: 12px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
 
-<div class="hint">Move: Joystick (left side) or WASD / Arrows</div>
+      /* ===== UNIT CARDS ===== */
+      .unit {
+        background: linear-gradient(180deg, #0f1628, #070a14);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow:
+          inset 0 0 0 1px rgba(120, 160, 255, 0.15),
+          0 8px 24px rgba(0, 0, 0, 0.6);
+      }
 
-<div id="wrap">
-  <canvas id="c"></canvas>
-</div>
+      /* ===== LABELS ===== */
+      .label {
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        color: #9fb4ff;
+        margin-bottom: 3px;
+      }
 
-<div id="combatOverlay">
-  <iframe id="combatFrame"></iframe>
-</div>
+      /* ===== BARS ===== */
+      .bar {
+        height: 10px;
+        background: #1a1f33;
+        border-radius: 999px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+        margin-bottom: 6px;
+      }
 
-<script>
-/* =========================================================
+      .bar > div {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        transition: width 0.25s linear;
+      }
+
+      /* HP */
+      .bar > div {
+        background: linear-gradient(90deg, #2cff6a, #6dff9c);
+        box-shadow: 0 0 6px rgba(60, 255, 140, 0.7);
+      }
+
+      /* ATB */
+      .atb > div {
+        background: linear-gradient(90deg, #3aa0ff, #7fd1ff);
+        box-shadow: 0 0 6px rgba(80, 160, 255, 0.8);
+      }
+
+      /* ===== ROLE BUTTONS ===== */
+      .buttons {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      button {
+        flex: 1;
+        padding: 6px 0;
+        font-size: 11px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        background: linear-gradient(180deg, #141c33, #0b1020);
+        color: #cfe0ff;
+        border: none;
+        border-radius: 6px;
+        box-shadow:
+          inset 0 0 0 1px rgba(120, 160, 255, 0.2),
+          0 2px 6px rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: linear-gradient(180deg, #1b2550, #0f1633);
+      }
+
+      /* Enemy emphasis */
+      .unit.enemy {
+        border: 1px solid rgba(255, 120, 120, 0.25);
+      }
+
+      .unit.enemy .bar > div {
+        background: linear-gradient(90deg, #ff4a4a, #ff9a9a);
+        box-shadow: 0 0 8px rgba(255, 80, 80, 0.9);
+      }
+
+      /* ===== LOG ===== */
+      #log {
+        background: linear-gradient(180deg, #060912, #02040a);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow:
+          inset 0 0 0 1px rgba(120, 160, 255, 0.15),
+          0 8px 24px rgba(0, 0, 0, 0.6);
+        max-height: 160px;
+        overflow-y: auto;
+        font-size: 13px;
+      }
+
+      #log div {
+        color: #9aa4cc;
+      }
+
+      #log div:last-child {
+        color: #ffffff;
+      }
+
+      /* Combat scene container */
+      #combatScene {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at top, #0b0f1a, #000);
+        display: none;
+        z-index: 20;
+        overflow: auto;
+      }
+
+      #combatScene #game {
+        margin: 0 auto;
+      }
+
+      /* Add a small top bar for exiting (optional) */
+      #combatTopBar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        padding: 10px;
+        display: flex;
+        justify-content: flex-end;
+        backdrop-filter: blur(6px);
+        background: rgba(0, 0, 0, 0.35);
+      }
+      #combatExitBtn {
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: none;
+        font:
+          12px system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial;
+        color: rgba(255, 255, 255, 0.9);
+        background: rgba(60, 140, 255, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(120, 160, 255, 0.22);
+      }
+      #combatExitBtn:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="hint">Move: Joystick (left side) or WASD / Arrows</div>
+
+    <div id="wrap">
+      <canvas id="c"></canvas>
+    </div>
+
+    <!-- Inline Combat Scene (no iframe) -->
+    <div id="combatScene">
+      <div id="combatTopBar">
+        <button id="combatExitBtn" aria-label="Exit combat">Exit</button>
+      </div>
+
+      <div id="game">
+        <!-- Enemy -->
+        <div class="unit enemy">
+          <div class="label">Enemy HP</div>
+          <div class="bar"><div id="enemy-hp"></div></div>
+          <div class="label">Enemy ATB</div>
+          <div class="bar atb"><div id="enemy-atb"></div></div>
+        </div>
+
+        <!-- Players -->
+        <div id="players"></div>
+
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <script>
+      /* =========================================================
    CORE STATE
 ========================================================= */
-let gameState = "field"; // "field" | "combat"
+      let gameState = "field"; // "field" | "combat"
 
-/* =========================================================
+      /* =========================================================
    CANVAS SETUP
 ========================================================= */
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+      const canvas = document.getElementById("c");
+      const ctx = canvas.getContext("2d");
 
-function resize() {
-  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  canvas.style.width = innerWidth + "px";
-  canvas.style.height = innerHeight + "px";
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-addEventListener("resize", resize);
-resize();
+      function resize() {
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        canvas.width = Math.floor(innerWidth * dpr);
+        canvas.height = Math.floor(innerHeight * dpr);
+        canvas.style.width = innerWidth + "px";
+        canvas.style.height = innerHeight + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      addEventListener("resize", resize);
+      resize();
 
-/* =========================================================
+      /* =========================================================
    PLAYER
 ========================================================= */
-const player = {
-  x: innerWidth * 0.5,
-  y: innerHeight * 0.5,
-  r: 16,
-  speed: 240,
-  vx: 0,
-  vy: 0
-};
+      const player = {
+        x: innerWidth * 0.5,
+        y: innerHeight * 0.5,
+        r: 16,
+        speed: 240,
+        vx: 0,
+        vy: 0,
+      };
 
-/* =========================================================
+      /* =========================================================
    INPUT
 ========================================================= */
-const keys = new Set();
-addEventListener("keydown", e => keys.add(e.key.toLowerCase()));
-addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+      const keys = new Set();
+      addEventListener("keydown", (e) => keys.add(e.key.toLowerCase()));
+      addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 
-function keyboardAxis() {
-  let x = 0, y = 0;
-  if (keys.has("arrowleft") || keys.has("a")) x -= 1;
-  if (keys.has("arrowright") || keys.has("d")) x += 1;
-  if (keys.has("arrowup") || keys.has("w")) y -= 1;
-  if (keys.has("arrowdown") || keys.has("s")) y += 1;
-  const len = Math.hypot(x, y);
-  if (len > 0) { x /= len; y /= len; }
-  return { x, y };
-}
+      function keyboardAxis() {
+        let x = 0,
+          y = 0;
+        if (keys.has("arrowleft") || keys.has("a")) x -= 1;
+        if (keys.has("arrowright") || keys.has("d")) x += 1;
+        if (keys.has("arrowup") || keys.has("w")) y -= 1;
+        if (keys.has("arrowdown") || keys.has("s")) y += 1;
+        const len = Math.hypot(x, y);
+        if (len > 0) {
+          x /= len;
+          y /= len;
+        }
+        return { x, y };
+      }
 
-/* =========================================================
+      /* =========================================================
    VIRTUAL JOYSTICK
 ========================================================= */
-const joy = {
-  active: false,
-  id: null,
-  baseX: 0, baseY: 0,
-  knobX: 0, knobY: 0,
-  max: 52,
-  dead: 0.10,
-  axisX: 0, axisY: 0
-};
+      const joy = {
+        active: false,
+        id: null,
+        baseX: 0,
+        baseY: 0,
+        knobX: 0,
+        knobY: 0,
+        max: 52,
+        dead: 0.1,
+        axisX: 0,
+        axisY: 0,
+      };
 
-function setJoy(px, py) {
-  const dx = px - joy.baseX;
-  const dy = py - joy.baseY;
-  const dist = Math.hypot(dx, dy);
-  const clamped = Math.min(dist, joy.max);
-  const nx = dist ? dx / dist : 0;
-  const ny = dist ? dy / dist : 0;
+      function setJoy(px, py) {
+        const dx = px - joy.baseX;
+        const dy = py - joy.baseY;
+        const dist = Math.hypot(dx, dy);
+        const clamped = Math.min(dist, joy.max);
+        const nx = dist ? dx / dist : 0;
+        const ny = dist ? dy / dist : 0;
 
-  joy.knobX = joy.baseX + nx * clamped;
-  joy.knobY = joy.baseY + ny * clamped;
+        joy.knobX = joy.baseX + nx * clamped;
+        joy.knobY = joy.baseY + ny * clamped;
 
-  let ax = (nx * clamped) / joy.max;
-  let ay = (ny * clamped) / joy.max;
-  const alen = Math.hypot(ax, ay);
+        let ax = (nx * clamped) / joy.max;
+        let ay = (ny * clamped) / joy.max;
+        const alen = Math.hypot(ax, ay);
 
-  if (alen < joy.dead) {
-    ax = ay = 0;
-  } else {
-    const t = (alen - joy.dead) / (1 - joy.dead);
-    ax = (ax / alen) * t;
-    ay = (ay / alen) * t;
-  }
+        if (alen < joy.dead) {
+          ax = ay = 0;
+        } else {
+          const t = (alen - joy.dead) / (1 - joy.dead);
+          ax = (ax / alen) * t;
+          ay = (ay / alen) * t;
+        }
 
-  joy.axisX = ax;
-  joy.axisY = ay;
-}
+        joy.axisX = ax;
+        joy.axisY = ay;
+      }
 
-canvas.addEventListener("pointerdown", e => {
-  canvas.setPointerCapture(e.pointerId);
-  if (!joy.active) {
-    joy.active = true;
-    joy.id = e.pointerId;
-    joy.baseX = e.clientX;
-    joy.baseY = e.clientY;
-    joy.knobX = e.clientX;
-    joy.knobY = e.clientY;
-  }
-});
+      canvas.addEventListener("pointerdown", (e) => {
+        canvas.setPointerCapture(e.pointerId);
+        if (!joy.active) {
+          joy.active = true;
+          joy.id = e.pointerId;
+          joy.baseX = e.clientX;
+          joy.baseY = e.clientY;
+          joy.knobX = e.clientX;
+          joy.knobY = e.clientY;
+        }
+      });
 
-canvas.addEventListener("pointermove", e => {
-  if (joy.active && e.pointerId === joy.id) {
-    setJoy(e.clientX, e.clientY);
-  }
-});
+      canvas.addEventListener("pointermove", (e) => {
+        if (joy.active && e.pointerId === joy.id) {
+          setJoy(e.clientX, e.clientY);
+        }
+      });
 
-function endJoy(e) {
-  if (e.pointerId === joy.id) {
-    joy.active = false;
-    joy.id = null;
-    joy.axisX = joy.axisY = 0;
-  }
-}
-canvas.addEventListener("pointerup", endJoy);
-canvas.addEventListener("pointercancel", endJoy);
-canvas.addEventListener("pointerout", endJoy);
+      function endJoy(e) {
+        if (e.pointerId === joy.id) {
+          joy.active = false;
+          joy.id = null;
+          joy.axisX = joy.axisY = 0;
+        }
+      }
+      canvas.addEventListener("pointerup", endJoy);
+      canvas.addEventListener("pointercancel", endJoy);
+      canvas.addEventListener("pointerout", endJoy);
 
-/* =========================================================
+      /* =========================================================
    RANDOM ENCOUNTERS
 ========================================================= */
-let encounterTimer = 0;
+      let encounterTimer = 0;
 
-function tryEncounter(dt) {
-  encounterTimer += dt;
-  if (encounterTimer > 3) {
-    encounterTimer = 0;
-    if (Math.random() < 0.25) {
-      startCombat();
-    }
-  }
-}
+      function tryEncounter(dt) {
+        encounterTimer += dt;
+        if (encounterTimer > 3) {
+          encounterTimer = 0;
+          if (Math.random() < 0.25) {
+            startCombat();
+          }
+        }
+      }
 
-/* =========================================================
-   SCENE SWITCHING
+      /* =========================================================
+   COMBAT SYSTEM (INLINE)
 ========================================================= */
-function startCombat() {
-  gameState = "combat";
-  document.getElementById("combatOverlay").style.display = "block";
-  document.getElementById("combatFrame").src = "FF13 3v1.html";
-}
+      const combatScene = document.getElementById("combatScene");
+      const log = document.getElementById("log");
 
-window.addEventListener("message", e => {
-  if (e.data === "combatEnd") {
-    document.getElementById("combatOverlay").style.display = "none";
-    document.getElementById("combatFrame").src = "";
-    gameState = "field";
-    last = performance.now();
-    requestAnimationFrame(tick);
-  }
-});
+      let players = [];
+      let enemy = null;
+      let battleOver = false;
 
-/* =========================================================
-   GAME LOOP
+      const COMBAT_SPEED = 1.6;
+      let combatTimer = null;
+
+      function logMsg(msg) {
+        const div = document.createElement("div");
+        div.textContent = msg;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function renderPlayers() {
+        const container = document.getElementById("players");
+        container.innerHTML = "";
+
+        players.forEach((p, i) => {
+          const unit = document.createElement("div");
+          unit.className = "unit";
+          unit.innerHTML = `
+      <div class="label">Player ${i + 1} HP</div>
+      <div class="bar"><div id="p${i}-hp"></div></div>
+      <div class="label">ATB</div>
+      <div class="bar atb"><div id="p${i}-atb"></div></div>
+      <div class="buttons">
+        <button data-role="Commando" data-i="${i}">Com</button>
+        <button data-role="Ravager" data-i="${i}">Rav</button>
+        <button data-role="Medic" data-i="${i}">Med</button>
+      </div>
+    `;
+          container.appendChild(unit);
+        });
+
+        // event delegation for role buttons
+        container.onclick = (e) => {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const i = Number(btn.dataset.i);
+          const role = btn.dataset.role;
+          setRole(i, role);
+        };
+      }
+
+      function setRole(i, role) {
+        if (!players[i]) return;
+        players[i].role = role;
+        logMsg(`Player ${i + 1} → ${role}`);
+      }
+
+      function updateBars() {
+        players.forEach((p, i) => {
+          const hpEl = document.getElementById(`p${i}-hp`);
+          const atbEl = document.getElementById(`p${i}-atb`);
+          if (hpEl) hpEl.style.width = (p.hp / p.maxHp) * 100 + "%";
+          if (atbEl) atbEl.style.width = Math.min(p.atb, 100) + "%";
+        });
+
+        const ehp = document.getElementById("enemy-hp");
+        const eatb = document.getElementById("enemy-atb");
+        if (ehp) ehp.style.width = (enemy.hp / enemy.maxHp) * 100 + "%";
+        if (eatb) eatb.style.width = Math.min(enemy.atb, 100) + "%";
+      }
+
+      function alivePlayers() {
+        return players.filter((p) => p.hp > 0);
+      }
+
+      function initCombat() {
+        // reset state
+        battleOver = false;
+        log.innerHTML = "";
+
+        players = [
+          { hp: 100, maxHp: 100, atb: 0, role: "Commando", atbRate: 1.0 },
+          { hp: 100, maxHp: 100, atb: 0, role: "Ravager", atbRate: 1.2 },
+          { hp: 100, maxHp: 100, atb: 0, role: "Medic", atbRate: 1.4 },
+        ];
+
+        enemy = {
+          hp: 200,
+          maxHp: 200,
+          atb: 0,
+        };
+
+        renderPlayers();
+        updateBars();
+        logMsg("Encounter! Battle start.");
+      }
+
+      function endBattle(resultText) {
+        battleOver = true;
+        logMsg(resultText);
+        clearTimeout(combatTimer);
+
+        setTimeout(() => {
+          endCombat();
+        }, 900);
+      }
+
+      function combatLoop() {
+        if (gameState !== "combat") return;
+        if (battleOver) return;
+
+        // players build ATB
+        players.forEach((p, i) => {
+          if (p.hp <= 0) return;
+
+          p.atb += p.atbRate * COMBAT_SPEED;
+          if (p.atb >= 100) {
+            if (p.role === "Commando") {
+              enemy.hp = Math.max(0, enemy.hp - 30);
+              logMsg(`P${i + 1} attacks (30)`);
+            }
+            if (p.role === "Ravager") {
+              enemy.hp = Math.max(0, enemy.hp - 45);
+              logMsg(`P${i + 1} rapid hits (45)`);
+            }
+            if (p.role === "Medic") {
+              p.hp = Math.min(p.maxHp, p.hp + 30);
+              logMsg(`P${i + 1} heals (30)`);
+            }
+            p.atb = 0;
+          }
+        });
+
+        // enemy ATB
+        enemy.atb += 2 * COMBAT_SPEED;
+        if (enemy.atb >= 100) {
+          const targets = alivePlayers();
+          if (targets.length > 0) {
+            const t = targets[Math.floor(Math.random() * targets.length)];
+            t.hp = Math.max(0, t.hp - 20);
+            logMsg("Enemy attacks (20)");
+          }
+          enemy.atb = 0;
+        }
+
+        updateBars();
+
+        // end conditions
+        if (enemy.hp <= 0) return endBattle("Victory!");
+        if (alivePlayers().length === 0) return endBattle("Defeat...");
+
+        combatTimer = setTimeout(combatLoop, 100);
+      }
+
+      function startCombat() {
+        gameState = "combat";
+        combatScene.style.display = "block";
+
+        initCombat();
+        combatLoop();
+      }
+
+      function endCombat() {
+        // hide scene
+        combatScene.style.display = "none";
+        gameState = "field";
+
+        // reset encounter timer a little (optional)
+        encounterTimer = 0;
+
+        // restart field loop
+        last = performance.now();
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById("combatExitBtn").addEventListener("click", () => {
+        if (gameState === "combat") {
+          endBattle("Retreat!");
+        }
+      });
+
+      /* =========================================================
+   GAME LOOP (FIELD)
 ========================================================= */
-let last = performance.now();
-function tick(now) {
-  if (gameState !== "field") return;
+      let last = performance.now();
+      function tick(now) {
+        if (gameState !== "field") return;
 
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
 
-  const kb = keyboardAxis();
-  let ax = kb.x, ay = kb.y;
-  if (joy.axisX || joy.axisY) {
-    ax = joy.axisX;
-    ay = joy.axisY;
-  }
+        const kb = keyboardAxis();
+        let ax = kb.x,
+          ay = kb.y;
+        if (joy.axisX || joy.axisY) {
+          ax = joy.axisX;
+          ay = joy.axisY;
+        }
 
-  player.vx = ax * player.speed;
-  player.vy = ay * player.speed;
-  player.x += player.vx * dt;
-  player.y += player.vy * dt;
+        player.vx = ax * player.speed;
+        player.vy = ay * player.speed;
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
 
-  player.x = Math.max(player.r, Math.min(innerWidth - player.r, player.x));
-  player.y = Math.max(player.r, Math.min(innerHeight - player.r, player.y));
+        player.x = Math.max(
+          player.r,
+          Math.min(innerWidth - player.r, player.x),
+        );
+        player.y = Math.max(
+          player.r,
+          Math.min(innerHeight - player.r, player.y),
+        );
 
-  tryEncounter(dt);
-  draw();
-  requestAnimationFrame(tick);
-}
-requestAnimationFrame(tick);
+        tryEncounter(dt);
+        draw();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
 
-/* =========================================================
+      /* =========================================================
    RENDERING
 ========================================================= */
-function drawGrid(spacing = 48) {
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = "#9bdcff";
-  for (let x = 0; x <= innerWidth; x += spacing) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, innerHeight); ctx.stroke();
-  }
-  for (let y = 0; y <= innerHeight; y += spacing) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(innerWidth, y); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
+      function drawGrid(spacing = 48) {
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = "#9bdcff";
+        for (let x = 0; x <= innerWidth; x += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, innerHeight);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= innerHeight; y += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(innerWidth, y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
 
-function drawPlayer() {
-  ctx.fillStyle = "#7CFF8A";
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
-  ctx.fill();
-}
+      function drawPlayer() {
+        ctx.fillStyle = "#7CFF8A";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-function drawJoystick() {
-  if (!joy.active) return;
-  ctx.globalAlpha = 0.6;
-  ctx.fillStyle = "#1b2433";
-  ctx.beginPath();
-  ctx.arc(joy.baseX, joy.baseY, joy.max, 0, Math.PI * 2);
-  ctx.fill();
+      function drawJoystick() {
+        if (!joy.active) return;
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = "#1b2433";
+        ctx.beginPath();
+        ctx.arc(joy.baseX, joy.baseY, joy.max, 0, Math.PI * 2);
+        ctx.fill();
 
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = "#9bdcff";
-  ctx.beginPath();
-  ctx.arc(joy.knobX, joy.knobY, joy.max * 0.45, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-}
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = "#9bdcff";
+        ctx.beginPath();
+        ctx.arc(joy.knobX, joy.knobY, joy.max * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
 
-function draw() {
-  ctx.clearRect(0, 0, innerWidth, innerHeight);
-  ctx.fillStyle = "#0b0e14";
-  ctx.fillRect(0, 0, innerWidth, innerHeight);
-  drawGrid();
-  drawPlayer();
-  drawJoystick();
-}
-</script>
-
-</body>
+      function draw() {
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        ctx.fillStyle = "#0b0e14";
+        ctx.fillRect(0, 0, innerWidth, innerHeight);
+        drawGrid();
+        drawPlayer();
+        drawJoystick();
+      }
+    </script>
+  </body>
 </html>
