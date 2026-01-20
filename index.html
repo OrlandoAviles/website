@@ -5,540 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Creative Dojo</title>
 
-    <style>
-      /* =========================
-         BASE
-      ========================== */
-      body {
-        font-family: Arial, sans-serif;
-        color: #fff;
-        margin: 0;
-        padding: 20px;
-        background: #0b0b0f;
-        overflow-x: hidden;
-      }
-
-      /* =========================
-         RANDOM SPACE CANVAS BG
-      ========================== */
-      #space {
-        position: fixed;
-        inset: 0;
-        z-index: -2;
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        background: #0b0b0f;
-      }
-
-      .scanlines {
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background: repeating-linear-gradient(
-          to bottom,
-          rgba(255, 255, 255, 0.02) 0px,
-          rgba(255, 255, 255, 0.02) 1px,
-          transparent 2px,
-          transparent 6px
-        );
-        opacity: 0.08;
-        mix-blend-mode: overlay;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .scanlines {
-          display: none;
-        }
-      }
-
-      /* =========================
-         TYPOGRAPHY
-      ========================== */
-      h1 {
-        font-size: 2.2rem;
-        margin-bottom: 5px;
-        letter-spacing: 0.2px;
-      }
-
-      .subtitle {
-        color: #aaa;
-        margin-bottom: 22px;
-        font-size: 1rem;
-      }
-
-      /* =========================
-         LAYOUT
-      ========================== */
-      .section {
-        margin-top: 26px;
-      }
-
-      .section-title {
-        font-size: 1.2rem;
-        margin: 0 0 12px;
-        color: #eaeaea;
-        letter-spacing: 0.2px;
-      }
-
-      .section-subtitle {
-        color: #9a9a9a;
-        margin: -6px 0 14px;
-        font-size: 0.95rem;
-        line-height: 1.35;
-        max-width: 900px;
-      }
-
-      /* IMPORTANT: give the cards "breathing room" like your original file */
-      .card-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 18px;
-      }
-
-      .divider {
-        height: 1px;
-        background: rgba(255, 255, 255, 0.08);
-        margin: 22px 0 12px;
-        border-radius: 999px;
-      }
-
-      /* =========================
-         FILTER BAR
-      ========================== */
-      .filterbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin: 10px 0 16px;
-        align-items: center;
-      }
-
-      .filter-label {
-        color: rgba(255, 255, 255, 0.68);
-        font-size: 0.9rem;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-        margin-right: 4px;
-      }
-
-      .filter-btn {
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.06);
-        color: #eee;
-        padding: 8px 12px;
-        border-radius: 999px;
-        cursor: pointer;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-        transition:
-          transform 0.08s ease,
-          background 0.15s ease,
-          border-color 0.15s ease;
-        user-select: none;
-      }
-
-      .filter-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(76, 175, 239, 0.25);
-      }
-
-      .filter-btn:active {
-        transform: translateY(1px);
-      }
-
-      .filter-btn.active {
-        border-color: rgba(76, 175, 239, 0.35);
-        background: rgba(76, 175, 239, 0.14);
-        box-shadow: 0 0 18px rgba(76, 175, 239, 0.16);
-      }
-
-      .filter-count {
-        margin-left: auto;
-        color: rgba(255, 255, 255, 0.65);
-        font-size: 0.9rem;
-      }
-
-      .card-link.hidden {
-        display: none !important;
-      }
-
-      /* =========================
-         CARD LINK + CARD (Spruced)
-      ========================== */
-      .card-link {
-        display: block;
-        text-decoration: none;
-        color: inherit;
-        border-radius: 18px;
-        outline: none;
-      }
-
-      .card {
-        position: relative;
-        overflow: hidden;
-
-        /* IMPORTANT FIX: reserve space so star never touches title */
-        padding: 16px 56px 16px 28px;
-
-        border-radius: 18px;
-        background: rgba(30, 30, 30, 0.82);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-
-        transform: translateY(0);
-        transition:
-          transform 0.22s ease,
-          box-shadow 0.25s ease,
-          border-color 0.25s ease,
-          filter 0.25s ease;
-      }
-
-      /* Accent bar */
-      .card::after {
-        content: "";
-        position: absolute;
-        top: 12px;
-        left: 10px;
-        bottom: 12px;
-        width: 2px;
-        border-radius: 999px;
-
-        background: linear-gradient(
-          to bottom,
-          rgba(76, 175, 239, 0.92),
-          rgba(76, 239, 161, 0.78)
-        );
-        opacity: 0.25;
-        transition:
-          opacity 0.25s ease,
-          filter 0.25s ease;
-      }
-
-      /* Shimmer sweep */
-      .card::before {
-        content: "";
-        position: absolute;
-        inset: -40%;
-        background: linear-gradient(
-          115deg,
-          transparent 0%,
-          rgba(255, 255, 255, 0.06) 35%,
-          rgba(76, 175, 239, 0.08) 50%,
-          rgba(255, 255, 255, 0.05) 65%,
-          transparent 100%
-        );
-        transform: translateX(-70%) rotate(8deg);
-        opacity: 0;
-        transition: opacity 0.25s ease;
-        pointer-events: none;
-      }
-
-      .card-title-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .card-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-
-        transition:
-          transform 0.22s ease,
-          border-color 0.25s ease;
-      }
-
-      .card-title {
-        color: #4cafef;
-        font-size: 1.08rem;
-        font-weight: 900;
-        margin: 0;
-        letter-spacing: 0.15px;
-        transition: transform 0.22s ease;
-      }
-
-      .card p {
-        margin: 10px 0 0;
-        color: #aaa;
-        font-size: 0.9rem;
-        line-height: 1.45;
-      }
-
-      .card-meta {
-        margin-top: 10px;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .card-link:hover .card,
-      .card-link:focus-visible .card {
-        transform: translateY(-7px);
-        border-color: rgba(76, 175, 239, 0.28);
-        filter: saturate(1.06) contrast(1.02);
-
-        box-shadow:
-          0 18px 44px rgba(0, 0, 0, 0.5),
-          0 0 0 1px rgba(76, 175, 239, 0.1),
-          0 0 18px rgba(76, 175, 239, 0.32),
-          0 0 52px rgba(76, 239, 161, 0.1);
-      }
-
-      .card-link:hover .card::before,
-      .card-link:focus-visible .card::before {
-        opacity: 1;
-        animation: shimmer 1.15s ease forwards;
-      }
-
-      .card-link:hover .card::after,
-      .card-link:focus-visible .card::after {
-        opacity: 0.95;
-        filter: drop-shadow(0 0 10px rgba(76, 175, 239, 0.5));
-      }
-
-      .card-link:hover .card-title,
-      .card-link:focus-visible .card-title {
-        transform: translateX(2px);
-      }
-
-      .card-link:hover .card-icon,
-      .card-link:focus-visible .card-icon {
-        transform: translateY(-1px) scale(1.03);
-        border-color: rgba(76, 175, 239, 0.25);
-      }
-
-      @keyframes shimmer {
-        0% {
-          transform: translateX(-70%) rotate(8deg);
-        }
-        100% {
-          transform: translateX(70%) rotate(8deg);
-        }
-      }
-
-      /* =========================
-         BANNER CARD
-      ========================== */
-      .banner-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 15px;
-      }
-
-      .card.banner {
-        padding: 18px 56px 18px 30px;
-        border-radius: 20px;
-        background: linear-gradient(
-          135deg,
-          rgba(76, 175, 239, 0.18),
-          rgba(76, 239, 161, 0.08)
-        );
-        border: 1px solid rgba(76, 175, 239, 0.22);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
-      }
-
-      .card.banner .card-title {
-        font-size: 1.22rem;
-      }
-
-      .card.banner p {
-        font-size: 0.95rem;
-        color: #c7c7c7;
-        max-width: 980px;
-      }
-
-      /* =========================
-         BADGES
-      ========================== */
-      .badge {
-        display: inline-block;
-        font-size: 0.75rem;
-        padding: 5px 9px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        color: #ddd;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        letter-spacing: 0.2px;
-      }
-
-      .badge.soon {
-        background: rgba(255, 193, 7, 0.12);
-        border-color: rgba(255, 193, 7, 0.22);
-        color: #ffd36d;
-      }
-
-      .badge.mobile {
-        background: rgba(76, 175, 239, 0.12);
-        border-color: rgba(76, 175, 239, 0.22);
-        color: #8fd2ff;
-      }
-
-      .badge.desktop {
-        background: rgba(156, 39, 176, 0.12);
-        border-color: rgba(156, 39, 176, 0.22);
-        color: #e2a8ff;
-      }
-
-      .badge.game {
-        background: rgba(76, 239, 161, 0.1);
-        border-color: rgba(76, 239, 161, 0.2);
-        color: #9fffd0;
-      }
-
-      .badge.proto {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.12);
-        color: #ddd;
-      }
-
-      .badge.ready {
-        background: rgba(0, 200, 83, 0.14);
-        border-color: rgba(0, 200, 83, 0.24);
-        color: #b6ffcf;
-      }
-
-      /* NEW: tool badge (real badge again) */
-      .badge.tool {
-        background: rgba(255, 255, 255, 0.09);
-        border-color: rgba(76, 175, 239, 0.24);
-        color: #bfe8ff;
-      }
-
-      .footer-note {
-        margin-top: 30px;
-        color: #999;
-        font-size: 0.9rem;
-      }
-
-      .footer-note strong {
-        color: #ddd;
-      }
-
-      /* =========================
-         BOOKMARKS SHELF (Netflix)
-      ========================== */
-      .bookmark-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-        margin: 6px 0 14px;
-      }
-
-      .reset-btn {
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.06);
-        color: #eee;
-        padding: 8px 12px;
-        border-radius: 999px;
-        cursor: pointer;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-        transition:
-          transform 0.08s ease,
-          background 0.15s ease,
-          border-color 0.15s ease;
-        user-select: none;
-      }
-
-      .reset-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 193, 7, 0.25);
-      }
-
-      .reset-btn:active {
-        transform: translateY(1px);
-      }
-
-      .drag-hint {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.52);
-      }
-
-      .bookmark-shelf {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 18px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      /* same silhouette as normal cards, just shelf scrolling */
-      .bookmark-item {
-        flex: 0 0 auto;
-        width: clamp(280px, 26vw, 340px);
-      }
-
-      .bookmark-shelf::-webkit-scrollbar {
-        height: 8px;
-      }
-      .bookmark-shelf::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.14);
-        border-radius: 999px;
-      }
-
-      .bookmark-item.dragging {
-        opacity: 0.55;
-        transform: scale(0.985);
-      }
-
-      /* =========================
-         BOOKMARK STAR BUTTON
-      ========================== */
-      .bookmark-btn {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-
-        width: 36px;
-        height: 36px;
-        border-radius: 999px;
-
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(0, 0, 0, 0.28);
-        color: rgba(255, 255, 255, 0.75);
-
-        display: grid;
-        place-items: center;
-
-        cursor: pointer;
-        z-index: 4;
-
-        transition:
-          transform 0.12s ease,
-          background 0.2s ease,
-          border-color 0.2s ease,
-          color 0.2s ease;
-      }
-
-      .bookmark-btn:hover {
-        transform: translateY(-1px) scale(1.03);
-        border-color: rgba(76, 175, 239, 0.35);
-        background: rgba(76, 175, 239, 0.12);
-        color: #fff;
-      }
-
-      .bookmark-btn:active {
-        transform: translateY(0px) scale(0.98);
-      }
-
-      .bookmark-btn.active {
-        border-color: rgba(255, 193, 7, 0.45);
-        background: rgba(255, 193, 7, 0.14);
-        color: #ffd36d;
-        box-shadow: 0 0 18px rgba(255, 193, 7, 0.18);
-      }
-    </style>
+    <link rel="stylesheet" href="./css/styles.css" />
   </head>
 
   <body>
@@ -644,7 +111,7 @@
         <!-- Tools -->
         <a
           class="card-link"
-          href="List.html"
+          href="FeaturedApps/List.html"
           data-app="list"
           data-tags="desktop tool stable"
         >
@@ -664,7 +131,7 @@
 
         <a
           class="card-link"
-          href="Journal.html"
+          href="FeaturedApps/Journal.html"
           data-app="journal"
           data-tags="desktop tool stable"
         >
@@ -686,7 +153,7 @@
 
         <a
           class="card-link"
-          href="PixelSpriteEditor.html"
+          href="FeaturedApps/PixelSpriteEditor.html"
           data-app="sprite"
           data-tags="desktop tool prototype"
         >
@@ -706,7 +173,7 @@
 
         <a
           class="card-link"
-          href="Beatpad.html"
+          href="FeaturedApps/Beatpad.html"
           data-app="beatpad"
           data-tags="desktop tool prototype"
         >
@@ -726,7 +193,7 @@
 
         <a
           class="card-link"
-          href="ParticleEngine.html"
+          href="FeaturedApps/ParticleEngine.html"
           data-app="particles"
           data-tags="desktop tool prototype"
         >
@@ -751,7 +218,7 @@
         <!-- Games -->
         <a
           class="card-link"
-          href="PocketDodge.html"
+          href="FeaturedApps/PocketDodge.html"
           data-app="pocketdodge"
           data-tags="mobile minigame prototype"
         >
@@ -773,7 +240,7 @@
 
         <a
           class="card-link"
-          href="Shmup.html"
+          href="FeaturedApps/Shmup.html"
           data-app="shmup"
           data-tags="mobile minigame prototype"
         >
@@ -793,7 +260,7 @@
 
         <a
           class="card-link"
-          href="Blackjack.html"
+          href="FeaturedApps/Blackjack.html"
           data-app="blackjack"
           data-tags="desktop minigame"
         >
@@ -813,7 +280,30 @@
 
         <a
           class="card-link"
-          href="Slots.html"
+          href="FeaturedApps/Tarot.html"
+          data-app="tarot"
+          data-tags="desktop tool"
+        >
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-icon">🔮</div>
+              <div class="card-title">Tarot</div>
+            </div>
+            <p>
+              Draw cards, track readings, and explore spreads from your Creative
+              Dojo.
+            </p>
+            <div class="card-meta">
+              <span class="badge ready">Ready</span>
+              <span class="badge desktop">Desktop</span>
+              <span class="badge tool">Tool</span>
+            </div>
+          </div>
+        </a>
+
+        <a
+          class="card-link"
+          href="FeaturedApps/Slots.html"
           data-app="slots"
           data-tags="desktop minigame prototype"
         >
@@ -839,367 +329,7 @@
       </p>
     </div>
 
-    <!-- Random Canvas Stars -->
-    <script>
-      (() => {
-        const canvas = document.getElementById("space");
-        const ctx = canvas.getContext("2d");
-
-        let W = 0,
-          H = 0,
-          DPR = 1;
-        const layers = [];
-
-        function resize() {
-          DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
-          W = window.innerWidth;
-          H = window.innerHeight;
-
-          canvas.width = Math.floor(W * DPR);
-          canvas.height = Math.floor(H * DPR);
-          canvas.style.width = W + "px";
-          canvas.style.height = H + "px";
-          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-          build();
-        }
-
-        function rand(a, b) {
-          return a + Math.random() * (b - a);
-        }
-
-        function build() {
-          layers.length = 0;
-
-          const config = [
-            { count: 130, speed: 6, sizeMin: 0.6, sizeMax: 1.6, alpha: 0.55 },
-            { count: 95, speed: 14, sizeMin: 0.8, sizeMax: 2.1, alpha: 0.35 },
-            { count: 65, speed: 26, sizeMin: 1.2, sizeMax: 2.8, alpha: 0.22 },
-          ];
-
-          for (const c of config) {
-            const stars = [];
-            for (let i = 0; i < c.count; i++) {
-              const huePick = Math.random();
-              let tint = "255,255,255";
-              if (huePick < 0.18) tint = "76,175,239";
-              else if (huePick < 0.26) tint = "76,239,161";
-              else if (huePick < 0.29) tint = "175,76,239";
-
-              stars.push({
-                x: rand(0, W),
-                y: rand(0, H),
-                r: rand(c.sizeMin, c.sizeMax),
-                v: rand(c.speed * 0.6, c.speed * 1.4),
-                a: rand(c.alpha * 0.6, c.alpha * 1.0),
-                tint,
-              });
-            }
-            layers.push(stars);
-          }
-        }
-
-        function drawBg() {
-          ctx.fillStyle = "#0b0b0f";
-          ctx.fillRect(0, 0, W, H);
-
-          const g1 = ctx.createRadialGradient(
-            W * 0.2,
-            H * 0.12,
-            0,
-            W * 0.2,
-            H * 0.12,
-            640,
-          );
-          g1.addColorStop(0, "rgba(76,175,239,0.14)");
-          g1.addColorStop(1, "rgba(0,0,0,0)");
-
-          const g2 = ctx.createRadialGradient(
-            W * 0.78,
-            H * 0.3,
-            0,
-            W * 0.78,
-            H * 0.3,
-            520,
-          );
-          g2.addColorStop(0, "rgba(76,239,161,0.09)");
-          g2.addColorStop(1, "rgba(0,0,0,0)");
-
-          const g3 = ctx.createRadialGradient(
-            W * 0.55,
-            H * 0.95,
-            0,
-            W * 0.55,
-            H * 0.95,
-            600,
-          );
-          g3.addColorStop(0, "rgba(175,76,239,0.07)");
-          g3.addColorStop(1, "rgba(0,0,0,0)");
-
-          ctx.fillStyle = g1;
-          ctx.fillRect(0, 0, W, H);
-          ctx.fillStyle = g2;
-          ctx.fillRect(0, 0, W, H);
-          ctx.fillStyle = g3;
-          ctx.fillRect(0, 0, W, H);
-        }
-
-        let last = performance.now();
-        function tick(now) {
-          const dt = Math.min(0.033, (now - last) / 1000);
-          last = now;
-
-          drawBg();
-
-          for (let li = 0; li < layers.length; li++) {
-            const stars = layers[li];
-            for (const s of stars) {
-              s.y += s.v * dt;
-              if (s.y > H + 10) {
-                s.y = -10;
-                s.x = rand(0, W);
-              }
-
-              ctx.beginPath();
-              ctx.fillStyle = `rgba(${s.tint},${s.a})`;
-              ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-
-          requestAnimationFrame(tick);
-        }
-
-        window.addEventListener("resize", resize, { passive: true });
-        resize();
-        requestAnimationFrame(tick);
-      })();
-    </script>
-
-    <!-- Featured Filters + Bookmarking + Drag reorder -->
-    <script>
-      (() => {
-        const STORAGE_KEY = "dojo_bookmarks_v6";
-        const defaultBookmarks = [
-          "particles",
-          "beatpad",
-          "sprite",
-          "pocketdodge",
-        ];
-
-        const bookmarkShelf = document.getElementById("bookmarkShelf");
-        const bookmarksSection = document.getElementById("bookmarksSection");
-        const bookmarkDivider = document.getElementById("bookmarkDivider");
-        const bookmarkCount = document.getElementById("bookmarkCount");
-        const resetBtn = document.getElementById("resetBookmarksBtn");
-
-        const filterButtons = Array.from(
-          document.querySelectorAll(".filter-btn"),
-        );
-        const featuredCards = Array.from(
-          document.querySelectorAll("#featuredGrid .card-link[data-app]"),
-        );
-        const countEl = document.getElementById("filterCount");
-
-        function loadBookmarks() {
-          try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return [...defaultBookmarks];
-            const parsed = JSON.parse(raw);
-            if (!Array.isArray(parsed)) return [...defaultBookmarks];
-            return parsed;
-          } catch {
-            return [...defaultBookmarks];
-          }
-        }
-
-        function saveBookmarks(list) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        }
-
-        function bookmarkSet() {
-          return new Set(loadBookmarks());
-        }
-
-        function setBookmarked(appId, yes) {
-          const list = loadBookmarks();
-          const has = list.includes(appId);
-
-          let next = list;
-          if (yes && !has) next = [appId, ...list];
-          if (!yes && has) next = list.filter((x) => x !== appId);
-
-          saveBookmarks(next);
-          renderAll();
-        }
-
-        function ensureBookmarkButton(link) {
-          const appId = link.dataset.app;
-          const card = link.querySelector(".card");
-          if (!appId || !card) return;
-
-          let btn = card.querySelector(".bookmark-btn");
-          if (!btn) {
-            btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "bookmark-btn";
-            btn.addEventListener("click", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const set = bookmarkSet();
-              setBookmarked(appId, !set.has(appId));
-            });
-            card.appendChild(btn);
-          }
-        }
-
-        function syncStars() {
-          const set = bookmarkSet();
-
-          featuredCards.forEach((link) => {
-            const appId = link.dataset.app;
-            if (!appId) return;
-
-            ensureBookmarkButton(link);
-
-            const btn = link.querySelector(".bookmark-btn");
-            if (!btn) return;
-
-            const active = set.has(appId);
-            btn.classList.toggle("active", active);
-            btn.innerHTML = active ? "★" : "☆";
-            btn.title = active ? "Remove bookmark" : "Bookmark to top";
-          });
-        }
-
-        function setupDrag(wrapper) {
-          wrapper.setAttribute("draggable", "true");
-
-          wrapper.addEventListener("dragstart", (e) => {
-            wrapper.classList.add("dragging");
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", wrapper.dataset.app || "");
-          });
-
-          wrapper.addEventListener("dragend", () => {
-            wrapper.classList.remove("dragging");
-          });
-
-          wrapper.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-          });
-
-          wrapper.addEventListener("drop", (e) => {
-            e.preventDefault();
-            const fromId = e.dataTransfer.getData("text/plain");
-            const toId = wrapper.dataset.app;
-            if (!fromId || !toId || fromId === toId) return;
-
-            const list = loadBookmarks().filter(Boolean);
-            const fromIndex = list.indexOf(fromId);
-            const toIndex = list.indexOf(toId);
-            if (fromIndex === -1 || toIndex === -1) return;
-
-            list.splice(fromIndex, 1);
-            list.splice(toIndex, 0, fromId);
-
-            saveBookmarks(list);
-            renderAll();
-          });
-        }
-
-        function renderBookmarksShelf() {
-          const ids = loadBookmarks();
-          const map = new Map();
-          featuredCards.forEach((link) => map.set(link.dataset.app, link));
-
-          const links = ids.map((id) => map.get(id)).filter(Boolean);
-          bookmarkShelf.innerHTML = "";
-
-          if (links.length === 0) {
-            bookmarksSection.style.display = "none";
-            bookmarkDivider.style.display = "none";
-            return;
-          }
-
-          bookmarksSection.style.display = "";
-          bookmarkDivider.style.display = "";
-
-          links.forEach((link) => {
-            const appId = link.dataset.app;
-
-            const wrapper = document.createElement("div");
-            wrapper.className = "bookmark-item";
-            wrapper.dataset.app = appId;
-
-            const clone = link.cloneNode(true);
-            clone.querySelectorAll(".bookmark-btn").forEach((b) => b.remove());
-            clone.classList.remove("hidden");
-
-            wrapper.appendChild(clone);
-            bookmarkShelf.appendChild(wrapper);
-
-            setupDrag(wrapper);
-          });
-
-          bookmarkCount.textContent = `${links.length} pinned`;
-        }
-
-        function getTags(link) {
-          return (link.dataset.tags || "")
-            .toLowerCase()
-            .split(/\s+/)
-            .filter(Boolean);
-        }
-
-        function matchesFilter(link, filter) {
-          if (filter === "all") return true;
-          if (filter === "bookmarked")
-            return bookmarkSet().has(link.dataset.app);
-          return getTags(link).includes(filter);
-        }
-
-        function setActiveFilter(btn) {
-          filterButtons.forEach((b) => b.classList.toggle("active", b === btn));
-        }
-
-        function applyFilter(filter) {
-          let shown = 0;
-
-          featuredCards.forEach((link) => {
-            const show = matchesFilter(link, filter);
-            link.classList.toggle("hidden", !show);
-            if (show) shown++;
-          });
-
-          countEl.textContent = `${shown}/${featuredCards.length} shown`;
-        }
-
-        function renderAll() {
-          renderBookmarksShelf();
-          syncStars();
-
-          const activeBtn =
-            filterButtons.find((b) => b.classList.contains("active")) ||
-            filterButtons[0];
-          applyFilter(activeBtn?.dataset?.filter || "all");
-        }
-
-        resetBtn.addEventListener("click", () => {
-          saveBookmarks([...defaultBookmarks]);
-          renderAll();
-        });
-
-        filterButtons.forEach((btn) => {
-          btn.addEventListener("click", () => {
-            setActiveFilter(btn);
-            applyFilter(btn.dataset.filter || "all");
-          });
-        });
-
-        renderAll();
-      })();
-    </script>
+    <!-- JS -->
+    <script type="module" src="./js/main.js"></script>
   </body>
 </html>

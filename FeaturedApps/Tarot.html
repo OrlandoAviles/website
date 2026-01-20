@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarot</title>
+
+  <style>
+    :root {
+      --btnInk: rgba(255, 255, 255, 0.92);
+      --stroke: rgba(255, 255, 255, 0.18);
+      --glass: rgba(255, 255, 255, 0.10);
+      --glassHover: rgba(255, 255, 255, 0.14);
+
+      /* solid label bg (prevents overlap blur stacking) */
+      --cardBg: rgba(0, 0, 0, 0.92);
+      --cardStroke: rgba(255, 255, 255, 0.18);
+      --cardText: rgba(255, 255, 255, 0.96);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      background: #05050a;
+    }
+
+    /* Star + nebula canvas */
+    #space {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      pointer-events: none;
+      background: #05050a;
+    }
+
+    /* Tarot drawing canvas */
+    #tarotCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 12px;
+
+      color: var(--btnInk);
+      border: 1px solid var(--stroke);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    button:hover {
+      background: var(--glassHover);
+      border-color: rgba(255, 255, 255, 0.26);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* bottom-right stacked controls */
+    .controlStack {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      z-index: 20;
+
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    /* desktop: buttons bigger so they don’t drown */
+    @media (min-width: 900px) {
+      .controlStack button {
+        padding: 14px 18px;
+        font-size: 15px;
+        border-radius: 14px;
+      }
+    }
+
+    /* Panels */
+    .panel {
+      position: absolute;
+      right: 12px;
+      bottom: 62px;
+      z-index: 30;
+
+      width: 285px;
+      padding: 10px;
+
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.30);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+
+      display: none;
+    }
+
+    .panel.open { display: block; }
+
+    .panelTitle {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      color: rgba(255,255,255,0.85);
+      margin: 2px 0 10px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 10px 0 12px;
+      border-radius: 999px;
+    }
+
+    .sliderRow {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .sliderLabelRow {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 8px;
+    }
+
+    .sliderValue { color: rgba(255,255,255,0.65); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: rgba(255,255,255,0.85);
+    }
+
+    .huePreview {
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      margin-top: 10px;
+      overflow: hidden;
+      background: linear-gradient(
+        90deg,
+        hsl(0 85% 55%),
+        hsl(60 85% 55%),
+        hsl(120 85% 55%),
+        hsl(180 85% 55%),
+        hsl(240 85% 55%),
+        hsl(300 85% 55%),
+        hsl(360 85% 55%)
+      );
+      opacity: 0.85;
+    }
+
+    .fullWidthBtn {
+      width: 100%;
+      border-radius: 12px;
+      font-weight: 900;
+      letter-spacing: 0.2px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.25);
+      color: rgba(255,255,255,0.92);
+      outline: none;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    select option {
+      background: #05050a;
+      color: rgba(255,255,255,0.92);
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="space"></canvas>
+  <canvas id="tarotCanvas"></canvas>
+
+  <div class="controlStack">
+    <button id="visualsBtn" type="button">🎛️ Visuals</button>
+    <button id="decksBtn" type="button">🃏 Decks</button>
+    <button id="clearBtn" type="button">Clear</button>
+  </div>
+
+  <!-- Visuals Panel -->
+  <div id="visualsPanel" class="panel" aria-hidden="true">
+    <div class="panelTitle">Visuals</div>
+
+    <div class="sliderRow">
+      <div class="sliderLabelRow">
+        <span>Intensity</span>
+        <span class="sliderValue" id="intensityValue">80%</span>
+      </div>
+      <input id="intensitySlider" type="range" min="0" max="100" value="80" />
+    </div>
+
+    <div class="sliderRow">
+      <div class="sliderLabelRow">
+        <span>Card Size</span>
+        <span class="sliderValue" id="cardSizeValue">100%</span>
+      </div>
+      <input id="cardSizeSlider" type="range" min="60" max="160" value="100" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="panelTitle">Nebula Auras</div>
+
+    <div class="sliderRow">
+      <div class="sliderLabelRow">
+        <span>Hue A</span>
+        <span class="sliderValue" id="hueAValue">220°</span>
+      </div>
+      <input id="hueASlider" type="range" min="0" max="360" value="220" />
+      <div class="huePreview"></div>
+    </div>
+
+    <div class="sliderRow">
+      <div class="sliderLabelRow">
+        <span>Hue B</span>
+        <span class="sliderValue" id="hueBValue">120°</span>
+      </div>
+      <input id="hueBSlider" type="range" min="0" max="360" value="120" />
+      <div class="huePreview"></div>
+    </div>
+
+    <div class="sliderRow">
+      <button id="randomizeBtn" type="button" class="fullWidthBtn">
+        🎲 Randomize Auras
+      </button>
+    </div>
+  </div>
+
+  <!-- Decks Panel -->
+  <div id="decksPanel" class="panel" aria-hidden="true">
+    <div class="panelTitle">Decks</div>
+
+    <div class="sliderRow">
+      <div class="sliderLabelRow">
+        <span>Active Deck</span>
+        <span class="sliderValue" id="deckLabel">Text</span>
+      </div>
+      <select id="deckSelect">
+        <option value="text">Text (Tarot Names)</option>
+        <option value="playing">Playing Cards</option>
+      </select>
+    </div>
+
+    <div class="sliderRow">
+      <div class="panelTitle" style="margin:0 0 6px;">Tip</div>
+      <div style="
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.35;
+        color: rgba(255,255,255,0.72);
+      ">
+        Click anywhere to draw from the selected deck.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*********************************************************
+     * STORAGE (auto-save)
+     *********************************************************/
+    const STORAGE_KEY_SETTINGS = "tarot_settings_v1";
+
+    function saveSettings() {
+      const settings = {
+        fx: {
+          intensity: FX.intensity,
+          hueA: FX.hueA,
+          hueB: FX.hueB,
+        },
+        app: {
+          activeDeck: App.activeDeck,
+          cardScale: App.cardScale,
+        }
+      };
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
+        if (!raw) return false;
+
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") return false;
+
+        if (data.fx) {
+          if (typeof data.fx.intensity === "number") FX.intensity = clamp(data.fx.intensity, 0, 1);
+          if (typeof data.fx.hueA === "number") FX.hueA = ((data.fx.hueA % 360) + 360) % 360;
+          if (typeof data.fx.hueB === "number") FX.hueB = ((data.fx.hueB % 360) + 360) % 360;
+        }
+
+        if (data.app) {
+          if (data.app.activeDeck === "text" || data.app.activeDeck === "playing") {
+            App.activeDeck = data.app.activeDeck;
+          }
+          if (typeof data.app.cardScale === "number") {
+            App.cardScale = clamp(data.app.cardScale, 0.60, 1.60);
+          }
+        }
+
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    /*********************************************************
+     * FX STATE
+     *********************************************************/
+    const FX = {
+      intensity: 0.80,
+      hueA: 220,
+      hueB: 120,
+    };
+
+    const App = {
+      activeDeck: "text",
+      cardScale: 1.0,
+    };
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function setIntensity(v01) {
+      FX.intensity = clamp(v01, 0, 1);
+      Starfield.setIntensity(FX.intensity);
+    }
+
+    function applyAuras() {
+      Starfield.setHues(FX.hueA, FX.hueB);
+
+      document.documentElement.style.setProperty(
+        "--cardStroke",
+        `hsla(${FX.hueA} 92% 70% / 0.26)`
+      );
+    }
+
+    /*********************************************************
+     * UI PANELS
+     *********************************************************/
+    const visualsPanel = document.getElementById("visualsPanel");
+    const decksPanel = document.getElementById("decksPanel");
+    const visualsBtn = document.getElementById("visualsBtn");
+    const decksBtn = document.getElementById("decksBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    function openPanel(panel) {
+      panel.classList.add("open");
+      panel.setAttribute("aria-hidden", "false");
+    }
+    function closePanel(panel) {
+      panel.classList.remove("open");
+      panel.setAttribute("aria-hidden", "true");
+    }
+    function togglePanel(panel) {
+      panel.classList.contains("open") ? closePanel(panel) : openPanel(panel);
+    }
+    function closeAllPanels() {
+      closePanel(visualsPanel);
+      closePanel(decksPanel);
+    }
+
+    visualsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closePanel(decksPanel);
+      togglePanel(visualsPanel);
+    });
+
+    decksBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closePanel(visualsPanel);
+      togglePanel(decksPanel);
+    });
+
+    document.addEventListener("click", () => {
+      if (visualsPanel.classList.contains("open") || decksPanel.classList.contains("open")) {
+        closeAllPanels();
+      }
+    });
+
+    visualsPanel.addEventListener("click", (e) => e.stopPropagation());
+    decksPanel.addEventListener("click", (e) => e.stopPropagation());
+
+    clearBtn.addEventListener("click", () => {
+      clearCanvas();
+    });
+
+    /*********************************************************
+     * VISUAL CONTROLS
+     *********************************************************/
+    const intensitySlider = document.getElementById("intensitySlider");
+    const intensityValue = document.getElementById("intensityValue");
+
+    const cardSizeSlider = document.getElementById("cardSizeSlider");
+    const cardSizeValue = document.getElementById("cardSizeValue");
+
+    const hueASlider = document.getElementById("hueASlider");
+    const hueAValue = document.getElementById("hueAValue");
+
+    const hueBSlider = document.getElementById("hueBSlider");
+    const hueBValue = document.getElementById("hueBValue");
+
+    const randomizeBtn = document.getElementById("randomizeBtn");
+
+    function syncVisualUI() {
+      intensitySlider.value = String(Math.round(FX.intensity * 100));
+      intensityValue.textContent = `${Math.round(FX.intensity * 100)}%`;
+
+      cardSizeSlider.value = String(Math.round(App.cardScale * 100));
+      cardSizeValue.textContent = `${Math.round(App.cardScale * 100)}%`;
+
+      hueASlider.value = String(FX.hueA);
+      hueAValue.textContent = `${FX.hueA}°`;
+
+      hueBSlider.value = String(FX.hueB);
+      hueBValue.textContent = `${FX.hueB}°`;
+    }
+
+    intensitySlider.addEventListener("input", () => {
+      setIntensity((Number(intensitySlider.value) || 0) / 100);
+      syncVisualUI();
+      saveSettings();
+    });
+
+    cardSizeSlider.addEventListener("input", () => {
+      App.cardScale = clamp((Number(cardSizeSlider.value) || 100) / 100, 0.60, 1.60);
+      syncVisualUI();
+      redrawAll();
+      saveSettings();
+    });
+
+    hueASlider.addEventListener("input", () => {
+      FX.hueA = Number(hueASlider.value) || 0;
+      applyAuras();
+      syncVisualUI();
+      saveSettings();
+    });
+
+    hueBSlider.addEventListener("input", () => {
+      FX.hueB = Number(hueBSlider.value) || 0;
+      applyAuras();
+      syncVisualUI();
+      saveSettings();
+    });
+
+    function randomizeAuras() {
+      const a = Math.floor(Math.random() * 361);
+
+      let b = Math.floor(Math.random() * 361);
+      const minDiff = 60;
+      const diff = Math.abs(b - a);
+      if (diff < minDiff) b = (a + minDiff + Math.floor(Math.random() * 140)) % 360;
+
+      Starfield.morphTo(a, b, 1000);
+
+      FX.hueA = a;
+      FX.hueB = b;
+
+      applyAuras();
+      syncVisualUI();
+    }
+
+    randomizeBtn.addEventListener("click", () => {
+      randomizeAuras();
+      saveSettings();
+    });
+
+    /*********************************************************
+     * DECK CONTROLS
+     *********************************************************/
+    const deckSelect = document.getElementById("deckSelect");
+    const deckLabel = document.getElementById("deckLabel");
+
+    function syncDeckUI() {
+      deckSelect.value = App.activeDeck;
+      deckLabel.textContent = App.activeDeck === "text" ? "Text" : "Playing";
+    }
+
+    deckSelect.addEventListener("change", () => {
+      App.activeDeck = deckSelect.value;
+      syncDeckUI();
+      saveSettings();
+    });
+
+    /*********************************************************
+     * TAROT CANVAS DRAWING
+     *********************************************************/
+    const tarotCanvas = document.getElementById('tarotCanvas');
+    const tarotCtx = tarotCanvas.getContext('2d');
+    tarotCtx.imageSmoothingEnabled = true;
+
+    let draws = [];
+
+    let tarotNames = [
+      'The Fool','The Magician','The High Priestess','The Empress','The Emperor',
+      'The Hierophant','The Lovers','The Chariot','Strength','The Hermit',
+      'Wheel of Fortune','Justice','The Hanged Man','Death','Temperance',
+      'The Devil','The Tower','The Star','The Moon','The Sun','Judgement','The World',
+      'Ace of Wands','Two of Wands','Three of Wands','Four of Wands','Five of Wands','Six of Wands',
+      'Seven of Wands','Eight of Wands','Nine of Wands','Ten of Wands','Page of Wands','Knight of Wands',
+      'Queen of Wands','King of Wands',
+      'Ace of Cups','Two of Cups','Three of Cups','Four of Cups','Five of Cups','Six of Cups',
+      'Seven of Cups','Eight of Cups','Nine of Cups','Ten of Cups','Page of Cups','Knight of Cups',
+      'Queen of Cups','King of Cups',
+      'Ace of Swords','Two of Swords','Three of Swords','Four of Swords','Five of Swords','Six of Swords',
+      'Seven of Swords','Eight of Swords','Nine of Swords','Ten of Swords','Page of Swords','Knight of Swords',
+      'Queen of Swords','King of Swords',
+      'Ace of Pentacles','Two of Pentacles','Three of Pentacles','Four of Pentacles','Five of Pentacles',
+      'Six of Pentacles','Seven of Pentacles','Eight of Pentacles','Nine of Pentacles','Ten of Pentacles',
+      'Page of Pentacles','Knight of Pentacles','Queen of Pentacles','King of Pentacles'
+    ];
+
+    const Playing = (() => {
+      const suits = [
+        { sym: "♠", color: "#111" },
+        { sym: "♥", color: "#b0122b" },
+        { sym: "♦", color: "#b0122b" },
+        { sym: "♣", color: "#111" },
+      ];
+      const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+
+      function makeDeck() {
+        const deck = [];
+        for (const s of suits) for (const r of ranks) deck.push({ rank: r, suit: s.sym, ink: s.color });
+        return deck;
+      }
+
+      function randomCard() {
+        const deck = makeDeck();
+        return deck[Math.floor(Math.random() * deck.length)];
+      }
+
+      return { randomCard };
+    })();
+
+    function resizeTarotCanvas() {
+      const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+      tarotCanvas.width = Math.floor(window.innerWidth * dpr);
+      tarotCanvas.height = Math.floor(window.innerHeight * dpr);
+      tarotCanvas.style.width = window.innerWidth + "px";
+      tarotCanvas.style.height = window.innerHeight + "px";
+      tarotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      redrawAll();
+    }
+
+    window.addEventListener("resize", resizeTarotCanvas, { passive: true });
+    resizeTarotCanvas();
+
+    tarotCanvas.addEventListener('click', (event) => {
+      const x = event.clientX;
+      const y = event.clientY;
+
+      if (App.activeDeck === "text") {
+        shuffleArray(tarotNames);
+        const card = { type: "text", x, y, name: tarotNames[0] };
+        draws.push(card);
+        drawTextCard(card);
+        return;
+      }
+
+      if (App.activeDeck === "playing") {
+        const c = Playing.randomCard();
+        const card = {
+          type: "playing",
+          x, y,
+          rank: c.rank,
+          suit: c.suit,
+          ink: c.ink,
+          rot: (Math.random() * 10 - 5) * (Math.PI / 180),
+        };
+        draws.push(card);
+        drawPlayingCard(card);
+        return;
+      }
+    });
+
+    function drawTextCard(card) {
+      const s = App.cardScale;
+      const paddingX = 8 * s;
+      const r = 4 * s;
+
+      tarotCtx.save();
+      tarotCtx.font = `${Math.max(10, Math.round(12 * s))}px Arial`;
+      tarotCtx.textBaseline = 'middle';
+
+      const textW = tarotCtx.measureText(card.name).width;
+      const w = Math.ceil(textW + paddingX * 2);
+      const h = Math.round(22 * s);
+
+      const x = Math.round(card.x - w / 2);
+      const y = Math.round(card.y - h / 2);
+
+      tarotCtx.fillStyle = getCssVar("--cardBg");
+      roundRect(tarotCtx, x, y, w, h, r);
+      tarotCtx.fill();
+
+      tarotCtx.strokeStyle = getCssVar("--cardStroke");
+      tarotCtx.lineWidth = 1;
+      tarotCtx.stroke();
+
+      tarotCtx.fillStyle = getCssVar("--cardText");
+      tarotCtx.shadowColor = "rgba(0,0,0,0.55)";
+      tarotCtx.shadowBlur = 4 * s;
+      tarotCtx.fillText(card.name, x + paddingX, y + h / 2 + 0.5);
+
+      tarotCtx.restore();
+    }
+
+    function drawPlayingCard(card) {
+      const s = App.cardScale;
+
+      const w = 86 * s;
+      const h = 120 * s;
+      const r = 10 * s;
+
+      tarotCtx.save();
+      tarotCtx.translate(card.x, card.y);
+      tarotCtx.rotate(card.rot);
+
+      tarotCtx.shadowColor = "rgba(0,0,0,0.55)";
+      tarotCtx.shadowBlur = 18 * s;
+      tarotCtx.shadowOffsetY = 10 * s;
+
+      const x = -w / 2;
+      const y = -h / 2;
+
+      const g = tarotCtx.createLinearGradient(x, y, x, y + h);
+      g.addColorStop(0, "rgba(255,255,255,0.98)");
+      g.addColorStop(1, "rgba(245,245,245,0.96)");
+
+      tarotCtx.fillStyle = g;
+      roundRect(tarotCtx, x, y, w, h, r);
+      tarotCtx.fill();
+
+      tarotCtx.shadowBlur = 0;
+      tarotCtx.shadowOffsetY = 0;
+
+      tarotCtx.strokeStyle = "rgba(0,0,0,0.12)";
+      tarotCtx.lineWidth = 1;
+      tarotCtx.stroke();
+
+      tarotCtx.strokeStyle = "rgba(0,0,0,0.08)";
+      tarotCtx.lineWidth = 1;
+      roundRect(tarotCtx, x + 6 * s, y + 6 * s, w - 12 * s, h - 12 * s, Math.max(2, r - 3 * s));
+      tarotCtx.stroke();
+
+      tarotCtx.fillStyle = card.ink;
+      tarotCtx.font = `900 ${Math.max(10, Math.round(14 * s))}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      tarotCtx.textBaseline = "top";
+      tarotCtx.textAlign = "left";
+      tarotCtx.fillText(`${card.rank}${card.suit}`, x + 12 * s, y + 10 * s);
+
+      tarotCtx.font = `900 ${Math.max(18, Math.round(46 * s))}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      tarotCtx.textAlign = "center";
+      tarotCtx.textBaseline = "middle";
+      tarotCtx.fillText(card.suit, 0, 2 * s);
+
+      tarotCtx.save();
+      tarotCtx.rotate(Math.PI);
+      tarotCtx.font = `900 ${Math.max(10, Math.round(14 * s))}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      tarotCtx.textAlign = "left";
+      tarotCtx.textBaseline = "top";
+      tarotCtx.fillText(`${card.rank}${card.suit}`, x + 12 * s, y + 10 * s);
+      tarotCtx.restore();
+
+      tarotCtx.restore();
+    }
+
+    function clearCanvas() {
+      tarotCtx.clearRect(0, 0, tarotCanvas.width, tarotCanvas.height);
+      draws = [];
+    }
+
+    function redrawAll() {
+      tarotCtx.clearRect(0, 0, tarotCanvas.width, tarotCanvas.height);
+      for (const d of draws) {
+        if (d.type === "text") drawTextCard(d);
+        else if (d.type === "playing") drawPlayingCard(d);
+      }
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function getCssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    /*********************************************************
+     * STARFIELD
+     *********************************************************/
+    const Starfield = (() => {
+      const canvas = document.getElementById("space");
+      const ctx = canvas.getContext("2d");
+
+      let W = 0, H = 0, DPR = 1;
+      let layers = [];
+      let streaks = [];
+      let running = true;
+
+      let hueA = FX.hueA;
+      let hueB = FX.hueB;
+
+      let morphActive = false;
+      let morphStart = 0;
+      let morphDuration = 1000;
+      let hueAFrom = hueA, hueBFrom = hueB;
+      let hueATo = hueA, hueBTo = hueB;
+
+      const baseConfig = [
+        { count: 170, speed: 6,  sizeMin: 0.6, sizeMax: 1.5, alpha: 0.65, tw: 1.0 },
+        { count: 120, speed: 14, sizeMin: 0.8, sizeMax: 2.0, alpha: 0.40, tw: 1.2 },
+        { count: 80,  speed: 26, sizeMin: 1.1, sizeMax: 2.6, alpha: 0.24, tw: 1.4 },
+      ];
+
+      function rand(a, b) { return a + Math.random() * (b - a); }
+      function normalizeHue(h) { return ((h % 360) + 360) % 360; }
+
+      function lerpHue(a, b, t) {
+        a = normalizeHue(a);
+        b = normalizeHue(b);
+        let d = b - a;
+        if (d > 180) d -= 360;
+        if (d < -180) d += 360;
+        return normalizeHue(a + d * t);
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function setHues(a, b) {
+        hueA = normalizeHue(a);
+        hueB = normalizeHue(b);
+      }
+
+      function morphTo(a, b, durationMs = 1000) {
+        hueAFrom = hueA;
+        hueBFrom = hueB;
+        hueATo = normalizeHue(a);
+        hueBTo = normalizeHue(b);
+        morphDuration = Math.max(150, durationMs | 0);
+        morphStart = performance.now();
+        morphActive = true;
+      }
+
+      function setIntensity(v01) {
+        FX.intensity = clamp(v01, 0, 1);
+        rebuild();
+      }
+
+      function tintForStar() {
+        const roll = Math.random();
+        if (roll < 0.70) return "white";
+        const pickHue = roll < 0.86 ? hueA : (roll < 0.97 ? hueB : (hueA + 180) % 360);
+        return `hsl(${pickHue} 95% 72%)`;
+      }
+
+      function resize() {
+        DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+        W = window.innerWidth;
+        H = window.innerHeight;
+
+        canvas.width = Math.floor(W * DPR);
+        canvas.height = Math.floor(H * DPR);
+        canvas.style.width = W + "px";
+        canvas.style.height = H + "px";
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+        rebuild();
+      }
+
+      function rebuild() {
+        layers = [];
+        streaks = [];
+
+        const density = FX.intensity <= 0 ? 0 : (0.35 + FX.intensity * 0.65);
+
+        for (const c of baseConfig) {
+          const stars = [];
+          const count = Math.floor(c.count * density);
+
+          for (let i = 0; i < count; i++) {
+            stars.push({
+              x: rand(0, W),
+              y: rand(0, H),
+              r: rand(c.sizeMin, c.sizeMax),
+              v: rand(c.speed * 0.6, c.speed * 1.4),
+
+              baseA: rand(c.alpha * 0.6, c.alpha * 1.0),
+              twSpeed: rand(0.8, 2.0) * c.tw,
+              twPhase: rand(0, Math.PI * 2),
+
+              tint: tintForStar(),
+            });
+          }
+          layers.push(stars);
+        }
+      }
+
+      function updateMorph(now) {
+        if (!morphActive) return;
+
+        const tRaw = (now - morphStart) / morphDuration;
+        const t = clamp(tRaw, 0, 1);
+        const e = easeInOutCubic(t);
+
+        hueA = lerpHue(hueAFrom, hueATo, e);
+        hueB = lerpHue(hueBFrom, hueBTo, e);
+
+        for (const layer of layers) {
+          for (let i = 0; i < layer.length; i += 7) {
+            if (Math.random() < 0.5) layer[i].tint = tintForStar();
+          }
+        }
+
+        if (t >= 1) {
+          morphActive = false;
+          hueA = hueATo;
+          hueB = hueBTo;
+        }
+      }
+
+      function drawBg() {
+        ctx.fillStyle = "#05050a";
+        ctx.fillRect(0, 0, W, H);
+
+        const R = Math.max(W, H);
+
+        const g1 = ctx.createRadialGradient(W * 0.22, H * 0.14, 0, W * 0.22, H * 0.14, R * 0.72);
+        g1.addColorStop(0, `hsla(${hueA} 92% 62% / 0.18)`);
+        g1.addColorStop(0.42, `hsla(${hueA} 92% 62% / 0.06)`);
+        g1.addColorStop(1, `rgba(0,0,0,0)`);
+
+        const g2 = ctx.createRadialGradient(W * 0.80, H * 0.32, 0, W * 0.80, H * 0.32, R * 0.62);
+        g2.addColorStop(0, `hsla(${hueB} 92% 62% / 0.14)`);
+        g2.addColorStop(0.44, `hsla(${hueB} 92% 62% / 0.05)`);
+        g2.addColorStop(1, `rgba(0,0,0,0)`);
+
+        const hueC = normalizeHue((hueA + hueB) * 0.5);
+        const g3 = ctx.createRadialGradient(W * 0.56, H * 0.94, 0, W * 0.56, H * 0.94, R * 0.70);
+        g3.addColorStop(0, `hsla(${hueC} 90% 60% / 0.08)`);
+        g3.addColorStop(0.50, `hsla(${hueC} 90% 60% / 0.03)`);
+        g3.addColorStop(1, `rgba(0,0,0,0)`);
+
+        ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = g3; ctx.fillRect(0, 0, W, H);
+      }
+
+      function spawnShootingStar() {
+        const fromLeft = Math.random() < 0.5;
+
+        const x = fromLeft ? rand(-80, W * 0.3) : rand(W * 0.7, W + 80);
+        const y = rand(0, H * 0.35);
+
+        const dirX = fromLeft ? rand(0.8, 1.2) : rand(-1.2, -0.8);
+        const dirY = rand(0.9, 1.4);
+
+        streaks.push({
+          x, y,
+          dx: dirX,
+          dy: dirY,
+          speed: rand(850, 1400),
+          length: rand(120, 240),
+          tint: tintForStar(),
+          t: 0,
+          life: rand(0.6, 1.1)
+        });
+      }
+
+      function updateShootingStars(dt) {
+        if (FX.intensity <= 0) return;
+
+        const baseSeconds = rand(12, 20);
+        const scaledSeconds = baseSeconds / Math.max(0.18, FX.intensity);
+        const p = 1 / scaledSeconds;
+
+        if (Math.random() < p * dt) spawnShootingStar();
+
+        for (let i = streaks.length - 1; i >= 0; i--) {
+          const s = streaks[i];
+          s.t += dt;
+          s.x += s.dx * s.speed * dt;
+          s.y += s.dy * s.speed * dt;
+          if (s.t >= s.life) streaks.splice(i, 1);
+        }
+      }
+
+      function renderShootingStars() {
+        const mult = FX.intensity;
+
+        for (const s of streaks) {
+          const k = Math.min(1, s.t / s.life);
+          const fade = Math.sin(Math.PI * k) * mult;
+
+          const x2 = s.x - s.dx * s.length;
+          const y2 = s.y - s.dy * s.length;
+
+          ctx.save();
+          ctx.lineCap = "round";
+
+          const grad = ctx.createLinearGradient(x2, y2, s.x, s.y);
+          grad.addColorStop(0, `rgba(255,255,255,0)`);
+          grad.addColorStop(0.25, `rgba(255,255,255,${0.08 * fade})`);
+          grad.addColorStop(1, `rgba(255,255,255,${0.40 * fade})`);
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 2.1;
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(s.x, s.y);
+          ctx.stroke();
+
+          ctx.strokeStyle = s.tint;
+          ctx.globalAlpha = 0.14 * fade;
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(s.x, s.y);
+          ctx.stroke();
+
+          ctx.globalAlpha = 0.85 * fade;
+          ctx.fillStyle = s.tint;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      let last = performance.now();
+      function tick(now) {
+        if (!running) return;
+
+        const dt = Math.min(0.033, (now - last) / 1000);
+        last = now;
+
+        updateMorph(now);
+        drawBg();
+
+        const alphaMult = FX.intensity;
+
+        for (const stars of layers) {
+          for (const s of stars) {
+            s.y += s.v * dt;
+
+            if (s.y > H + 10) {
+              s.y = -10;
+              s.x = rand(0, W);
+              s.tint = tintForStar();
+              s.twPhase = rand(0, Math.PI * 2);
+            }
+
+            const twStrength = 0.35 * FX.intensity;
+            const tw = (0.65 + twStrength) + twStrength * Math.sin((now / 1000) * s.twSpeed + s.twPhase);
+
+            const a = clamp(s.baseA * tw * alphaMult, 0, 1);
+            if (a <= 0.001) continue;
+
+            ctx.beginPath();
+            ctx.globalAlpha = a;
+            ctx.fillStyle = s.tint;
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        updateShootingStars(dt);
+        renderShootingStars();
+
+        requestAnimationFrame(tick);
+      }
+
+      window.addEventListener("resize", resize, { passive: true });
+      resize();
+      requestAnimationFrame(tick);
+
+      return { setIntensity, setHues, morphTo };
+    })();
+
+    /*********************************************************
+     * INIT (load saved settings!)
+     *********************************************************/
+    loadSettings();
+
+    syncVisualUI();
+    syncDeckUI();
+
+    setIntensity(FX.intensity);
+    applyAuras();
+
+    redrawAll();
+  </script>
+</body>
+</html>
