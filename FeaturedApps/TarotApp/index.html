@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tarot</title>
+
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+
+  <body>
+    <canvas id="space"></canvas>
+    <canvas id="tarotCanvas"></canvas>
+
+    <div class="controlStack">
+      <button id="visualsBtn" type="button">🎛️ Visuals</button>
+      <button id="decksBtn" type="button">🃏 Decks</button>
+      <button id="clearBtn" type="button">Clear</button>
+    </div>
+
+    <!-- Visuals Panel -->
+    <div id="visualsPanel" class="panel" aria-hidden="true">
+      <div class="panelTitle">Visuals</div>
+
+      <div class="sliderRow">
+        <div class="sliderLabelRow">
+          <span>Intensity</span>
+          <span class="sliderValue" id="intensityValue">80%</span>
+        </div>
+        <input id="intensitySlider" type="range" min="0" max="100" value="80" />
+      </div>
+
+      <div class="sliderRow">
+        <div class="sliderLabelRow">
+          <span>Card Size</span>
+          <span class="sliderValue" id="cardSizeValue">100%</span>
+        </div>
+        <input
+          id="cardSizeSlider"
+          type="range"
+          min="60"
+          max="160"
+          value="100"
+        />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="panelTitle">Nebula Auras</div>
+
+      <div class="sliderRow">
+        <div class="sliderLabelRow">
+          <span>Hue A</span>
+          <span class="sliderValue" id="hueAValue">220°</span>
+        </div>
+        <input id="hueASlider" type="range" min="0" max="360" value="220" />
+        <div class="huePreview"></div>
+      </div>
+
+      <div class="sliderRow">
+        <div class="sliderLabelRow">
+          <span>Hue B</span>
+          <span class="sliderValue" id="hueBValue">120°</span>
+        </div>
+        <input id="hueBSlider" type="range" min="0" max="360" value="120" />
+        <div class="huePreview"></div>
+      </div>
+
+      <div class="sliderRow">
+        <button id="randomizeBtn" type="button" class="fullWidthBtn">
+          🎲 Randomize Auras
+        </button>
+      </div>
+    </div>
+
+    <!-- Decks Panel -->
+    <div id="decksPanel" class="panel" aria-hidden="true">
+      <div class="panelTitle">Decks</div>
+
+      <div class="sliderRow">
+        <div class="sliderLabelRow">
+          <span>Active Deck</span>
+          <span class="sliderValue" id="deckLabel">Text</span>
+        </div>
+        <select id="deckSelect">
+          <option value="text">Text (Tarot Names)</option>
+          <option value="playing">Playing Cards</option>
+        </select>
+      </div>
+
+      <div class="sliderRow">
+        <div class="panelTitle" style="margin: 0 0 6px">Tip</div>
+        <div
+          style="
+            font-family:
+              ui-sans-serif,
+              system-ui,
+              -apple-system,
+              Segoe UI,
+              Roboto,
+              Arial,
+              sans-serif;
+            font-size: 12px;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.72);
+          "
+        >
+          Click anywhere to draw from the selected deck.
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts (order matters!) -->
+    <script src="./js/state.js"></script>
+    <script src="./js/storage.js"></script>
+    <script src="./js/starfield.js"></script>
+    <script src="./js/tarot.js"></script>
+    <script src="./js/ui.js"></script>
+    <script src="./js/main.js"></script>
+  </body>
+</html>
