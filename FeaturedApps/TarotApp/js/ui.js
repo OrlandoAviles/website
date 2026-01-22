@@ -139,7 +139,12 @@ const deckLabel = document.getElementById("deckLabel");
 
 function syncDeckUI() {
   deckSelect.value = App.activeDeck;
-  deckLabel.textContent = App.activeDeck === "text" ? "Text" : "Playing";
+  deckLabel.textContent =
+    App.activeDeck === "text"
+      ? "Text"
+      : App.activeDeck === "playing"
+        ? "Playing"
+        : "Tarot";
 }
 
 deckSelect.addEventListener("change", () => {

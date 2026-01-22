@@ -1,17 +1,20 @@
 /*********************************************************
  * FX STATE
  *********************************************************/
-const FX = {
+window.FX = {
   intensity: 0.8,
   hueA: 220,
   hueB: 120,
 };
 
-const App = {
+window.App = {
   activeDeck: "text",
   cardScale: 1.0,
 };
 
+/*********************************************************
+ * FX HELPERS / GLOBAL FX FUNCTIONS
+ *********************************************************/
 window.setIntensity = function setIntensity(v01) {
   FX.intensity = clamp(v01, 0, 1);
   Starfield.setIntensity(FX.intensity);
@@ -19,6 +22,7 @@ window.setIntensity = function setIntensity(v01) {
 
 window.applyAuras = function applyAuras() {
   Starfield.setHues(FX.hueA, FX.hueB);
+
   document.documentElement.style.setProperty(
     "--cardStroke",
     `hsla(${FX.hueA} 92% 70% / 0.26)`,
@@ -41,3 +45,19 @@ window.randomizeAuras = function randomizeAuras() {
   applyAuras();
   syncVisualUI();
 };
+
+/*********************************************************
+ * INIT
+ *********************************************************/
+loadSettings();
+
+// ✅ Load tarot card images immediately at startup
+Tarot.preload();
+
+syncVisualUI();
+syncDeckUI();
+
+setIntensity(FX.intensity);
+applyAuras();
+
+redrawAll();

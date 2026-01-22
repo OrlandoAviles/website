@@ -166,6 +166,22 @@ tarotCanvas.addEventListener("click", (event) => {
     drawPlayingCard(card);
     return;
   }
+
+  if (App.activeDeck === "tarot") {
+    const t = Tarot.randomCard(); // pulls a random image-based tarot card
+
+    const card = {
+      type: "tarot",
+      x,
+      y,
+      name: t.name,
+      rot: (Math.random() * 10 - 5) * (Math.PI / 180),
+    };
+
+    draws.push(card);
+    drawTarotCard(card);
+    return;
+  }
 });
 
 function drawTextCard(card) {
@@ -277,6 +293,7 @@ function redrawAll() {
   for (const d of draws) {
     if (d.type === "text") drawTextCard(d);
     else if (d.type === "playing") drawPlayingCard(d);
+    else if (d.type === "tarot") drawTarotCard(d);
   }
 }
 
@@ -302,4 +319,75 @@ function getCssVar(name) {
   return getComputedStyle(document.documentElement)
     .getPropertyValue(name)
     .trim();
+}
+
+function drawTarotCard(card) {
+  const s = App.cardScale;
+
+  const w = 86 * s;
+  const h = 140 * s; // tarot usually taller than playing cards
+  const r = 12 * s;
+
+  const img = Tarot.getImage(card.name);
+
+  tarotCtx.save();
+  tarotCtx.translate(card.x, card.y);
+  tarotCtx.rotate(card.rot || 0);
+
+  tarotCtx.shadowColor = "rgba(0,0,0,0.60)";
+  tarotCtx.shadowBlur = 18 * s;
+  tarotCtx.shadowOffsetY = 10 * s;
+
+  const x = -w / 2;
+  const y = -h / 2;
+
+  // card frame base (like playing cards)
+  const g = tarotCtx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, "rgba(255,255,255,0.98)");
+  g.addColorStop(1, "rgba(245,245,245,0.96)");
+
+  tarotCtx.fillStyle = g;
+  roundRect(tarotCtx, x, y, w, h, r);
+  tarotCtx.fill();
+
+  tarotCtx.shadowBlur = 0;
+  tarotCtx.shadowOffsetY = 0;
+
+  tarotCtx.strokeStyle = "rgba(0,0,0,0.12)";
+  tarotCtx.lineWidth = 1;
+  tarotCtx.stroke();
+
+  // inner border
+  tarotCtx.strokeStyle = "rgba(0,0,0,0.08)";
+  tarotCtx.lineWidth = 1;
+  roundRect(
+    tarotCtx,
+    x + 6 * s,
+    y + 6 * s,
+    w - 12 * s,
+    h - 12 * s,
+    Math.max(2, r - 3 * s),
+  );
+  tarotCtx.stroke();
+
+  // image
+  if (img) {
+    // fit image inside inner area
+    const pad = 10 * s;
+    const innerX = x + pad;
+    const innerY = y + pad;
+    const innerW = w - pad * 2;
+    const innerH = h - pad * 2;
+
+    tarotCtx.drawImage(img, innerX, innerY, innerW, innerH);
+  } else {
+    // fallback text
+    tarotCtx.fillStyle = "#111";
+    tarotCtx.font = `900 ${Math.max(10, Math.round(12 * s))}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    tarotCtx.textAlign = "center";
+    tarotCtx.textBaseline = "middle";
+    tarotCtx.fillText(card.name, 0, 0);
+  }
+
+  tarotCtx.restore();
 }

@@ -6,6 +6,8 @@
     <title>Tarot</title>
 
     <link rel="stylesheet" href="./styles/main.css" />
+    <!-- optional: removes favicon 404 noise -->
+    <link rel="icon" href="data:," />
   </head>
 
   <body>
@@ -82,9 +84,11 @@
           <span>Active Deck</span>
           <span class="sliderValue" id="deckLabel">Text</span>
         </div>
+
         <select id="deckSelect">
           <option value="text">Text (Tarot Names)</option>
           <option value="playing">Playing Cards</option>
+          <option value="tarot">Tarot Cards</option>
         </select>
       </div>
 
@@ -114,8 +118,17 @@
     <script src="./js/state.js"></script>
     <script src="./js/storage.js"></script>
     <script src="./js/starfield.js"></script>
+
+    <!-- Tarot image deck -->
+    <script src="./js/tarotDeck.js"></script>
+
+    <!-- Tarot canvas logic -->
     <script src="./js/tarot.js"></script>
+
+    <!-- UI controls -->
     <script src="./js/ui.js"></script>
+
+    <!-- init + glue -->
     <script src="./js/main.js"></script>
   </body>
 </html>
