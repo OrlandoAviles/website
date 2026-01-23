@@ -33,11 +33,12 @@ function loadSettings() {
     }
 
     if (data.app) {
-      if (data.app.activeDeck === "text" || data.app.activeDeck === "playing") {
+      if (
+        data.app.activeDeck === "text" ||
+        data.app.activeDeck === "playing" ||
+        data.app.activeDeck === "tarot"
+      ) {
         App.activeDeck = data.app.activeDeck;
-      }
-      if (typeof data.app.cardScale === "number") {
-        App.cardScale = clamp(data.app.cardScale, 0.6, 1.6);
       }
     }
 
