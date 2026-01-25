@@ -27,9 +27,6 @@
       <button id="openParadigms">Paradigms</button>
       <button id="closeMenu">Close</button>
     </div>
-    <div class="subHint">
-      Set your paradigm deck here, then shift instantly in combat.
-    </div>
   </div>
 </div>
 
@@ -47,38 +44,33 @@
 
 <!-- COMBAT SCENE -->
 <div id="combatScene" style="display:none;">
-  <div id="shiftFlash"></div>
 
-  <div id="game">
-
-    <!-- PARADIGM HUD -->
-    <div id="combatHud" class="unit">
-      <div>
-        <div class="hudName" id="hudParadigmName">Paradigm</div>
-        <div class="hudRoles" id="hudParadigmRoles">Roles</div>
-      </div>
-      <div class="hudBtns">
-        <button id="shiftPrev">◀</button>
-        <button id="shiftNext">▶</button>
-        <button id="escapeCombat">Run</button>
-      </div>
+  <!-- PARADIGM HUD -->
+  <div id="combatHud" class="unit">
+    <div>
+      <div class="hudName" id="hudParadigmName">Paradigm</div>
+      <div class="hudRoles" id="hudParadigmRoles">Roles</div>
     </div>
-
-    <!-- ENEMY -->
-    <div class="unit enemy">
-      <div class="label">Enemy HP</div>
-      <div class="bar hp"><div id="enemy-hp"></div></div>
-      <div class="label">Enemy ATB</div>
-      <div class="bar atb"><div id="enemy-atb"></div></div>
+    <div class="hudBtns">
+      <button id="shiftPrev">◀</button>
+      <button id="shiftNext">▶</button>
     </div>
-
-    <!-- PLAYERS -->
-    <div id="players"></div>
-
-    <!-- LOG -->
-    <div id="log"></div>
-
   </div>
+
+  <!-- ENEMY -->
+  <div class="unit enemy">
+    <div class="label">Enemy HP</div>
+    <div class="bar hp"><div id="enemy-hp"></div></div>
+    <div class="label">Enemy ATB</div>
+    <div class="bar atb"><div id="enemy-atb"></div></div>
+  </div>
+
+  <!-- PLAYERS -->
+  <div id="players"></div>
+
+  <!-- LOG -->
+  <div id="log"></div>
+
 </div>
 
 <script type="module" src="js/main.js"></script>

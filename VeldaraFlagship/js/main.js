@@ -13,11 +13,11 @@ initCanvas(canvas);
 initKeyboard();
 attachJoystick(canvas, state);
 
-// Combat HUD buttons
+// Paradigm shift buttons
 document.getElementById("shiftPrev")?.addEventListener("click", shiftPrev);
 document.getElementById("shiftNext")?.addEventListener("click", shiftNext);
 
-// Keyboard paradigm shifting
+// Keyboard shifting (Q / E)
 addEventListener("keydown", (e) => {
   if (state.gameState !== "combat") return;
 
@@ -26,7 +26,7 @@ addEventListener("keydown", (e) => {
   if (k === "e") shiftNext();
 });
 
-// Main loop
+// Main game loop
 function loop(now) {
   const dt = Math.min(0.05, (now - state.lastTime) / 1000);
   state.lastTime = now;

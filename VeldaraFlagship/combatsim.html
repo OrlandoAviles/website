@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Combat Simulator</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: radial-gradient(circle at top, #0e1628, #05070d);
+  color: #dfe7ff;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  height: 100vh;
+}
+
+/* LEFT PANEL */
+#controls {
+  padding: 14px;
+  background: #0b1220;
+  border-right: 1px solid rgba(120,160,255,0.15);
+  overflow-y: auto;
+}
+
+.section {
+  margin-bottom: 20px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(20,26,44,0.6);
+}
+
+.section h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  color: #9fb4ff;
+}
+
+.control { margin-bottom: 8px; }
+.control label { font-size: 12px; }
+
+input, select, button { width: 100%; }
+
+/* TOP BAR */
+#topbar {
+  position: fixed;
+  left: 340px;
+  right: 0;
+  top: 0;
+  height: 48px;
+  background: #0c1426;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  border-bottom: 1px solid rgba(120,160,255,0.15);
+}
+
+/* PREVIEW */
+#preview {
+  margin-top: 50px;
+  padding: 16px;
+}
+
+/* COMBAT UI */
+.unit {
+  background: rgba(20,26,44,0.7);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.label {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.bar {
+  height: 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.bar > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4de, #8cf);
+  transition: width 0.1s linear;
+}
+
+.enemy .bar > div {
+  background: linear-gradient(90deg, #f66, #f99);
+}
+
+#log {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+  <div class="section">
+    <h2>Simulation Controls</h2>
+    <button id="runBattle">▶ Run Battle</button>
+    <button id="pauseBattle">⏸ Pause</button>
+    <button id="resetBattle">🔄 Reset</button>
+  </div>
+
+  <div class="section">
+    <h2>Player Team</h2>
+
+    <div class="control">
+      <label>Player 1 Role</label>
+      <select id="p1role">
+        <option>Commando</option>
+        <option>Ravager</option>
+        <option>Medic</option>
+      </select>
+    </div>
+    <div class="control">
+      <label>Player 1 Max HP</label>
+      <input type="range" id="p1hp" min="50" max="500" value="100">
+    </div>
+
+    <div class="control">
+      <label>Player 2 Role</label>
+      <select id="p2role">
+        <option>Commando</option>
+        <option>Ravager</option>
+        <option>Medic</option>
+      </select>
+    </div>
+    <div class="control">
+      <label>Player 2 Max HP</label>
+      <input type="range" id="p2hp" min="50" max="500" value="100">
+    </div>
+
+    <div class="control">
+      <label>Player 3 Role</label>
+      <select id="p3role">
+        <option>Commando</option>
+        <option>Ravager</option>
+        <option>Medic</option>
+      </select>
+    </div>
+    <div class="control">
+      <label>Player 3 Max HP</label>
+      <input type="range" id="p3hp" min="50" max="500" value="100">
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Enemy</h2>
+    <div class="control">
+      <label>Enemy Max HP</label>
+      <input type="range" id="enemyhp" min="100" max="2000" value="600">
+    </div>
+    <div class="control">
+      <label>Enemy ATB Speed</label>
+      <input type="range" id="enemyatb" min="0.5" max="3" step="0.1" value="2">
+    </div>
+  </div>
+</div>
+
+<div id="topbar"><strong>Combat Simulator</strong></div>
+
+<div id="preview">
+  <div class="unit enemy">
+    <div class="label">Enemy HP</div>
+    <div class="bar hp"><div id="enemy-hp"></div></div>
+    <div class="label">Enemy ATB</div>
+    <div class="bar atb"><div id="enemy-atb"></div></div>
+  </div>
+
+  <div id="players"></div>
+  <div id="log"></div>
+</div>
+
+<script type="module" src="js/combat-sim.js"></script>
+</body>
+</html>
