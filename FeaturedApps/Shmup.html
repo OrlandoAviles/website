@@ -10,22 +10,13 @@
       height: 100%;
       background: #07080c;
       overflow: hidden;
-      touch-action: none; /* important for mobile drag */
+      touch-action: none;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color: #e9eefc;
     }
-    #wrap {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-    }
-    canvas {
-      width: 100vw;
-      height: 100vh;
-      display: block;
-      image-rendering: pixelated;
-    }
+    #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+    canvas { width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
+
     #hud {
       position: fixed;
       left: 12px;
@@ -38,6 +29,7 @@
       user-select: none;
       -webkit-user-select: none;
       pointer-events: none;
+      z-index: 5;
     }
     .pill {
       background: rgba(255,255,255,0.08);
@@ -46,12 +38,14 @@
       padding: 6px 10px;
       backdrop-filter: blur(6px);
     }
+
     #buttons {
       position: fixed;
       right: 12px;
       top: 10px;
       display: flex;
       gap: 10px;
+      z-index: 6;
     }
     button {
       border: 1px solid rgba(255,255,255,0.18);
@@ -65,6 +59,7 @@
       cursor: pointer;
     }
     button:active { transform: scale(0.98); }
+
     #overlay {
       position: fixed;
       inset: 0;
@@ -73,6 +68,7 @@
       background: radial-gradient(ellipse at center, rgba(20,30,60,0.58), rgba(0,0,0,0.78));
       text-align: center;
       padding: 24px;
+      z-index: 10;
     }
     #panel {
       max-width: 520px;
@@ -106,7 +102,6 @@
   <div id="hud">
     <div class="pill">Score: <span id="score">0</span></div>
     <div class="pill">Lives: <span id="lives">3</span></div>
-    <div class="pill">Wave: <span id="wave">1</span></div>
   </div>
 
   <div id="buttons">
@@ -119,7 +114,7 @@
       <h1>📱 Mobile Shmup</h1>
       <p><b>Touch:</b> drag anywhere to move. Tap/hold to shoot.</p>
       <p><b>Desktop:</b> <kbd>WASD</kbd>/<kbd>Arrow</kbd> to move, <kbd>Space</kbd> to shoot, <kbd>P</kbd> to pause.</p>
-      <p class="hint">Tip: you have a tiny “graze bubble” (for forgiving hits). Keep your ship near the bottom and dance.</p>
+      <p class="hint">Stages now end with a boss. Clear it to see an arcade-style stage intro.</p>
       <div class="row">
         <button id="startBtn" type="button">Start</button>
       </div>
@@ -148,7 +143,6 @@
   // ===== UI =====
   const scoreEl = document.getElementById("score");
   const livesEl = document.getElementById("lives");
-  const waveEl  = document.getElementById("wave");
   const overlay = document.getElementById("overlay");
   const startBtn = document.getElementById("startBtn");
   const pauseBtn = document.getElementById("pauseBtn");
@@ -163,6 +157,12 @@
     return (dx*dx + dy*dy) <= (ar + br) * (ar + br);
   }
 
+  // ===== Hard Caps =====
+  const MAX_BULLETS = 320;
+  const MAX_ENEMIES = 140;
+  const MAX_STARS   = 160;
+  const MAX_BOSS_BULLETS = 260;
+
   // ===== Game State =====
   let running = false;
   let paused = false;
@@ -173,48 +173,94 @@
 
   let score = 0;
   let lives = 3;
-  let wave = 1;
+
+  // ===== Stage System =====
+  let stage = 1;
+  let stageTimer = 0;
+  const STAGE_LENGTH = 22; // seconds of normal play before boss
+
+  // Arcade intro card
+  let stageIntro = true;
+  let introTimer = 0;
+  const INTRO_DURATION = 2.8;
+
+  // Boss state
+  let inBossFight = false;
+  let boss = null;
 
   // Difficulty knobs
-  let enemyRate = 0.85;        // spawn chance per tick (scaled in spawner)
-  let enemySpeedBase = 110;    // px/s
-  let bulletSpeed = 720;       // px/s
-  let fireCooldown = 0.11;     // seconds between shots
+  let enemyRate = 0.6;        // spawn multiplier
+  let enemySpeedBase = 90;    // px/s
+  let bulletSpeed = 720;      // px/s
+  let fireCooldown = 0.13;    // seconds between shots
+
+  function applyStageDifficulty(s) {
+    if (s === 1) {
+      enemyRate = 0.6;
+      enemySpeedBase = 90;
+      fireCooldown = 0.13;
+    } else if (s === 2) {
+      enemyRate = 0.75;
+      enemySpeedBase = 105;
+      fireCooldown = 0.12;
+    } else if (s === 3) {
+      enemyRate = 0.9;
+      enemySpeedBase = 125;
+      fireCooldown = 0.11;
+    } else if (s === 4) {
+      enemyRate = 1.05;
+      enemySpeedBase = 145;
+      fireCooldown = 0.10;
+    } else {
+      enemyRate = 1.05 + (s - 4) * 0.08;
+      enemySpeedBase = 145 + (s - 4) * 10;
+      fireCooldown = Math.max(0.075, 0.10 - (s - 4) * 0.004);
+    }
+  }
 
   // Entities
   const bullets = [];
   const enemies = [];
+  const bossBullets = [];
   const stars = [];
 
   // ===== Player =====
   const player = {
     x: 0, y: 0,
     r: 14,
-    speed: 420, // px/s
-    invuln: 0,  // seconds
+    speed: 420,
+    invuln: 0,
     fireTimer: 0
   };
+
+  function startStageIntro() {
+    stageIntro = true;
+    introTimer = INTRO_DURATION;
+  }
 
   function reset() {
     score = 0;
     lives = 3;
-    wave = 1;
 
-    enemyRate = 0.85;
-    enemySpeedBase = 110;
-    bulletSpeed = 720;
-    fireCooldown = 0.11;
+    stage = 1;
+    stageTimer = 0;
+    applyStageDifficulty(stage);
 
     bullets.length = 0;
     enemies.length = 0;
+    bossBullets.length = 0;
     stars.length = 0;
+
+    inBossFight = false;
+    boss = null;
 
     player.x = W * 0.5;
     player.y = H * 0.82;
     player.invuln = 1.0;
     player.fireTimer = 0;
 
-    for (let i = 0; i < 140; i++) {
+    const starCount = Math.min(MAX_STARS, 140);
+    for (let i = 0; i < starCount; i++) {
       stars.push({
         x: Math.random() * W,
         y: Math.random() * H,
@@ -224,20 +270,25 @@
     }
 
     gameOver = false;
+    startStageIntro();
     updateHud();
   }
 
   function updateHud() {
     scoreEl.textContent = score;
     livesEl.textContent = lives;
-    waveEl.textContent = wave;
   }
 
   // ===== Spawning =====
   let spawnTimer = 0;
 
   function spawnEnemy() {
-    const type = Math.random() < 0.18 ? "tank" : "drifter";
+    if (enemies.length >= MAX_ENEMIES) return;
+
+    // Tanks unlock at Stage 2
+    let type = "drifter";
+    if (stage >= 2 && Math.random() < 0.20) type = "tank";
+
     const r = type === "tank" ? 18 : 14;
     const hp = type === "tank" ? 4 : 1;
 
@@ -247,7 +298,6 @@
       r,
       hp,
       type,
-      // movement
       vy: enemySpeedBase * (type === "tank" ? 0.75 : 1.0) + rand(-12, 30),
       vx: (type === "drifter" ? rand(-70, 70) : rand(-30, 30)),
       wob: rand(1.2, 2.2),
@@ -255,15 +305,45 @@
     });
   }
 
-  function maybeAdvanceWave() {
-    // Every N points, ramp. (Simple + effective)
-    const targetWave = 1 + Math.floor(score / 250);
-    if (targetWave > wave) {
-      wave = targetWave;
-      enemySpeedBase = 110 + (wave - 1) * 18;
-      enemyRate = 0.85 + (wave - 1) * 0.12;
-      fireCooldown = Math.max(0.07, 0.11 - (wave - 1) * 0.004); // slightly faster with progress
-      updateHud();
+  function spawnBoss() {
+    inBossFight = true;
+    // Clear regular enemies to make the boss moment readable
+    enemies.length = 0;
+    spawnTimer = 0;
+
+    const maxHp = 140 + stage * 35;
+    boss = {
+      x: W * 0.5,
+      y: -160,
+      r: 64,
+      hp: maxHp,
+      maxHp,
+      vy: 120,
+      t: 0,
+      fireTimer: 0,
+      fireCooldown: Math.max(0.55, 1.15 - stage * 0.07),
+      phase: 0
+    };
+  }
+
+  function bossFire() {
+    if (!boss) return;
+    if (bossBullets.length >= MAX_BOSS_BULLETS) return;
+
+    // A gentle radial burst that scales a bit with stage
+    const n = clamp(8 + Math.floor(stage * 0.7), 8, 14);
+    const speed = 170 + stage * 10;
+
+    for (let i = 0; i < n; i++) {
+      if (bossBullets.length >= MAX_BOSS_BULLETS) break;
+      const a = (i / n) * Math.PI * 2;
+      bossBullets.push({
+        x: boss.x,
+        y: boss.y + 10,
+        r: 4,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed
+      });
     }
   }
 
@@ -273,32 +353,20 @@
   let touchOffsetX = 0;
   let touchOffsetY = 0;
 
-  function getTouchById(touches, id) {
-    for (let i = 0; i < touches.length; i++) if (touches[i].identifier === id) return touches[i];
-    return null;
-  }
-
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
     touchActive = true;
     touchId = e.pointerId;
-
-    // Start shooting immediately on press, and also allow aiming by drag
     shootHeld = true;
 
-    // Smooth drag: keep the relative grab offset so the ship doesn't "teleport"
-    const px = e.clientX;
-    const py = e.clientY;
-    touchOffsetX = player.x - px;
-    touchOffsetY = player.y - py;
+    touchOffsetX = player.x - e.clientX;
+    touchOffsetY = player.y - e.clientY;
   });
 
   canvas.addEventListener("pointermove", (e) => {
     if (!touchActive || e.pointerId !== touchId) return;
-    const px = e.clientX;
-    const py = e.clientY;
-    player.x = clamp(px + touchOffsetX, 20, W - 20);
-    player.y = clamp(py + touchOffsetY, 20, H - 20);
+    player.x = clamp(e.clientX + touchOffsetX, 20, W - 20);
+    player.y = clamp(e.clientY + touchOffsetY, 20, H - 20);
   });
 
   function endPointer(e) {
@@ -307,7 +375,6 @@
     touchId = null;
     shootHeld = false;
   }
-
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("pointerleave", endPointer);
@@ -350,14 +417,14 @@
   let last = performance.now();
 
   function tick(now) {
-    const dt = Math.min(0.033, (now - last) / 1000); // cap delta for stability
+    const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
 
     if (running && !paused) {
       update(dt);
       render(dt);
     } else {
-      render(dt); // still draw pretty background even when paused
+      render(dt);
       if (paused) drawPaused();
     }
 
@@ -368,6 +435,13 @@
   // ===== Update =====
   function update(dt) {
     if (gameOver) return;
+
+    // Freeze gameplay during stage intro card
+    if (stageIntro) {
+      introTimer -= dt;
+      if (introTimer <= 0) stageIntro = false;
+      return;
+    }
 
     // Player movement (keyboard only; touch directly sets)
     let mx = 0, my = 0;
@@ -383,7 +457,7 @@
       player.y = clamp(player.y + my * player.speed * dt, 20, H - 20);
     }
 
-    // Shooting
+    // Shooting (hold)
     player.fireTimer -= dt;
     if (shootHeld && player.fireTimer <= 0) {
       player.fireTimer = fireCooldown;
@@ -391,46 +465,117 @@
     }
 
     // Stars
-    for (const st of stars) {
+    for (let i = 0; i < stars.length; i++) {
+      const st = stars[i];
       st.y += st.v * dt;
       if (st.y > H + 10) {
         st.y = -10;
         st.x = Math.random() * W;
-        st.v = rand(30, 150) + wave * 4;
+        st.v = rand(30, 150) + stage * 4;
         st.s = rand(0.6, 2.2);
       }
     }
 
-    // Spawn enemies
-    spawnTimer += dt;
-    // Convert enemyRate to a spawn probability that feels stable across frame rates
-    const spawnsPerSecond = 1.4 + (wave - 1) * 0.28;
-    while (spawnTimer >= 1 / 60) {
-      spawnTimer -= 1 / 60;
-      // Per-tick probability derived from desired rate
-      const p = clamp((spawnsPerSecond / 60) * (enemyRate / 1.0), 0, 0.25);
-      if (Math.random() < p) spawnEnemy();
+    // Stage timer: trigger boss instead of instant stage increment
+    if (!inBossFight && !boss) {
+      stageTimer += dt;
+      if (stageTimer >= STAGE_LENGTH) {
+        stageTimer = 0;
+        spawnBoss();
+      }
     }
 
-    // Bullets
+    // Normal enemy spawns only when NOT in boss fight
+    if (!inBossFight && !boss) {
+      spawnTimer += dt;
+      const spawnsPerSecond = Math.min(3.2, 1.2 + stage * 0.35);
+
+      while (spawnTimer >= 1 / 60) {
+        spawnTimer -= 1 / 60;
+        if (enemies.length >= MAX_ENEMIES) break;
+        const p = clamp((spawnsPerSecond / 60) * enemyRate, 0, 0.25);
+        if (Math.random() < p) spawnEnemy();
+      }
+    }
+
+    // Bullets (move + cleanup)
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
       b.y -= b.v * dt;
       if (b.y < -30) bullets.splice(i, 1);
     }
 
-    // Enemies
+    // Enemies (move + cleanup)
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       e.t += dt;
       e.y += e.vy * dt;
       e.x += (e.vx + Math.sin(e.t * e.wob) * 22) * dt;
 
-      // bounce slightly in bounds
       if (e.x < 16) { e.x = 16; e.vx = Math.abs(e.vx); }
       if (e.x > W - 16) { e.x = W - 16; e.vx = -Math.abs(e.vx); }
 
       if (e.y > H + 60) enemies.splice(i, 1);
+    }
+
+    // Boss update
+    if (boss) {
+      boss.t += dt;
+
+      // entrance
+      if (boss.y < 120) {
+        boss.y += boss.vy * dt;
+      } else {
+        boss.phase = 1;
+      }
+
+      // simple drift pattern
+      if (boss.phase === 1) {
+        boss.x = W * 0.5 + Math.sin(boss.t * 1.1) * (W * 0.22);
+      }
+
+      // fire
+      boss.fireTimer -= dt;
+      if (boss.phase === 1 && boss.fireTimer <= 0) {
+        boss.fireTimer = boss.fireCooldown;
+        bossFire();
+      }
+
+      // bullets hit boss
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r)) {
+          bullets.splice(i, 1);
+          boss.hp -= 1;
+          score += 5;
+        }
+      }
+
+      // defeat
+      if (boss.hp <= 0) {
+        score += 250 + stage * 50;
+        boss = null;
+        bossBullets.length = 0;
+        bullets.length = 0;
+
+        inBossFight = false;
+
+        stage += 1;
+        applyStageDifficulty(stage);
+        startStageIntro();
+      }
+    }
+
+    // Boss bullets (move + cleanup)
+    for (let i = bossBullets.length - 1; i >= 0; i--) {
+      const bb = bossBullets[i];
+      bb.x += bb.vx * dt;
+      bb.y += bb.vy * dt;
+
+      // remove if far off screen
+      if (bb.x < -80 || bb.x > W + 80 || bb.y < -80 || bb.y > H + 80) {
+        bossBullets.splice(i, 1);
+      }
     }
 
     // Collisions: bullets vs enemies
@@ -452,38 +597,68 @@
       }
     }
 
-    // Collisions: enemies vs player (with invuln & "graze bubble")
+    // Collisions: boss bullets vs player + enemy bodies vs player
     player.invuln = Math.max(0, player.invuln - dt);
-    const hitRadius = player.r * 0.78; // forgiving hitbox
+    const hitRadius = player.r * 0.78;
+
     if (player.invuln <= 0) {
-      for (const e of enemies) {
-        if (circleHit(e.x, e.y, e.r * 0.9, player.x, player.y, hitRadius)) {
+      // boss bullets
+      for (let i = 0; i < bossBullets.length; i++) {
+        const bb = bossBullets[i];
+        if (circleHit(bb.x, bb.y, bb.r, player.x, player.y, hitRadius)) {
           lives -= 1;
           player.invuln = 1.2;
           // small knock
           player.y = clamp(player.y + 18, 20, H - 20);
-          updateHud();
-          if (lives <= 0) {
-            gameOver = true;
-            running = true;
-            paused = false;
-            pauseBtn.textContent = "Pause";
-            showGameOver();
-          }
           break;
         }
       }
+
+      // enemy bodies
+      if (lives > 0) {
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (circleHit(e.x, e.y, e.r * 0.9, player.x, player.y, hitRadius)) {
+            lives -= 1;
+            player.invuln = 1.2;
+            player.y = clamp(player.y + 18, 20, H - 20);
+            break;
+          }
+        }
+      }
+
+      // boss body
+      if (lives > 0 && boss && circleHit(boss.x, boss.y, boss.r * 0.9, player.x, player.y, hitRadius)) {
+        lives -= 1;
+        player.invuln = 1.2;
+        player.y = clamp(player.y + 18, 20, H - 20);
+      }
     }
 
-    maybeAdvanceWave();
+    if (lives <= 0) {
+      gameOver = true;
+      paused = false;
+      pauseBtn.textContent = "Pause";
+    }
+
+    // Hard caps as last-resort safety nets
+    if (bullets.length > MAX_BULLETS) bullets.length = MAX_BULLETS;
+    if (enemies.length > MAX_ENEMIES) enemies.length = MAX_ENEMIES;
+    if (stars.length > MAX_STARS) stars.length = MAX_STARS;
+    if (bossBullets.length > MAX_BOSS_BULLETS) bossBullets.length = MAX_BOSS_BULLETS;
+
     updateHud();
   }
 
   function fire() {
-    // basic double-shot that tightens with wave a bit
-    const spread = Math.max(6, 14 - wave * 0.6);
+    if (bullets.length >= MAX_BULLETS) return;
+
+    const spread = Math.max(6, 14 - stage * 0.6);
     bullets.push({ x: player.x - spread, y: player.y - 18, r: 4, v: bulletSpeed });
-    bullets.push({ x: player.x + spread, y: player.y - 18, r: 4, v: bulletSpeed });
+
+    if (bullets.length < MAX_BULLETS) {
+      bullets.push({ x: player.x + spread, y: player.y - 18, r: 4, v: bulletSpeed });
+    }
   }
 
   // ===== Render =====
@@ -495,7 +670,8 @@
     // stars
     ctx.save();
     ctx.globalAlpha = 0.95;
-    for (const st of stars) {
+    for (let i = 0; i < stars.length; i++) {
+      const st = stars[i];
       ctx.fillStyle = "rgba(225,240,255,0.75)";
       ctx.fillRect(st.x, st.y, st.s, st.s);
     }
@@ -508,11 +684,24 @@
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // enemies
-    for (const e of enemies) drawEnemy(e);
+    // boss
+    if (boss) drawBoss(boss);
 
-    // bullets
-    for (const b of bullets) {
+    // enemies
+    for (let i = 0; i < enemies.length; i++) drawEnemy(enemies[i]);
+
+    // boss bullets
+    for (let i = 0; i < bossBullets.length; i++) {
+      const bb = bossBullets[i];
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255,180,80,0.95)";
+      ctx.arc(bb.x, bb.y, bb.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // player bullets
+    for (let i = 0; i < bullets.length; i++) {
+      const b = bullets[i];
       ctx.beginPath();
       ctx.fillStyle = "rgba(160,255,210,0.95)";
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -522,7 +711,23 @@
     // player
     drawPlayer();
 
-    // game over text on canvas (overlay handles main panel)
+    // stage intro card (arcade style)
+    if (stageIntro) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.38)";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "900 44px system-ui, sans-serif";
+      ctx.fillText(`STAGE ${stage}`, W/2, H/2);
+
+      ctx.font = "700 16px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.fillText("GET READY", W/2, H/2 + 34);
+      ctx.restore();
+    }
+
     if (gameOver) {
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.35)";
@@ -538,22 +743,52 @@
     }
   }
 
+  function drawBoss(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+
+    // body
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(170,120,255,0.92)";
+    ctx.arc(0, 0, b.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // core
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.arc(0, 0, b.r * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+
+    // hp bar
+    const w = 150;
+    const h = 10;
+    const pct = clamp(b.hp / b.maxHp, 0, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(-w/2, -b.r - 26, w, h);
+    ctx.fillStyle = "rgba(140,255,180,0.95)";
+    ctx.fillRect(-w/2, -b.r - 26, w * pct, h);
+
+    // label
+    ctx.textAlign = "center";
+    ctx.font = "800 12px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText("BOSS", 0, -b.r - 34);
+
+    ctx.restore();
+  }
+
   function drawPlayer() {
     const p = player;
-    // ship body
     ctx.save();
     ctx.translate(p.x, p.y);
 
-    // invuln blink
     if (p.invuln > 0) ctx.globalAlpha = 0.45 + 0.35 * Math.sin(performance.now() * 0.02);
 
-    // thruster glow
     ctx.beginPath();
     ctx.fillStyle = "rgba(120,200,255,0.28)";
     ctx.ellipse(0, 16, 10, 18, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ship triangle
     ctx.beginPath();
     ctx.fillStyle = "rgba(210,225,255,0.92)";
     ctx.moveTo(0, -18);
@@ -563,13 +798,11 @@
     ctx.closePath();
     ctx.fill();
 
-    // cockpit
     ctx.beginPath();
     ctx.fillStyle = "rgba(110,255,210,0.85)";
     ctx.arc(0, -3, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    // hitbox dot
     ctx.beginPath();
     ctx.fillStyle = "rgba(255,120,160,0.95)";
     ctx.arc(0, 2, 2.2, 0, Math.PI * 2);
@@ -583,7 +816,6 @@
     ctx.translate(e.x, e.y);
 
     if (e.type === "tank") {
-      // chunky diamond
       ctx.beginPath();
       ctx.fillStyle = "rgba(255,170,90,0.95)";
       ctx.moveTo(0, -18);
@@ -593,13 +825,11 @@
       ctx.closePath();
       ctx.fill();
 
-      // core
       ctx.beginPath();
       ctx.fillStyle = "rgba(0,0,0,0.25)";
       ctx.arc(0, 0, 7, 0, Math.PI * 2);
       ctx.fill();
 
-      // hp pips
       for (let i = 0; i < e.hp; i++) {
         ctx.beginPath();
         ctx.fillStyle = "rgba(255,255,255,0.75)";
@@ -607,7 +837,6 @@
         ctx.fill();
       }
     } else {
-      // drifter: spiky disk
       ctx.beginPath();
       ctx.fillStyle = "rgba(255,90,120,0.95)";
       ctx.arc(0, 0, 14, 0, Math.PI*2);
@@ -638,12 +867,6 @@
     ctx.fillStyle = "rgba(255,255,255,0.80)";
     ctx.fillText("Tap Resume or press P", W/2, H/2 + 26);
     ctx.restore();
-  }
-
-  function showGameOver() {
-    // keep overlay hidden; HUD stays. Restart button works.
-    // If you want a full overlay, uncomment:
-    // overlay.style.display = "grid";
   }
 
   // ===== Start initial state =====
