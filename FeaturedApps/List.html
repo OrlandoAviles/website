@@ -16,6 +16,8 @@
       --accent: #3498db;
       --accent-hover: #2980b9;
       --danger: #ff6b6b;
+      --soft: rgba(255,255,255,0.10);
+      --soft2: rgba(255,255,255,0.18);
     }
 
     * { box-sizing: border-box; }
@@ -47,26 +49,11 @@
       gap: 12px;
     }
 
-    .title-wrap {
-      flex: 1;
-      min-width: 0;
-    }
+    /* Title + rename */
+    .title-wrap { flex: 1; min-width: 0; }
+    .title-row { display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; }
 
-    .title-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: fit-content;
-      max-width: 100%;
-    }
-
-    #listTitleBtn {
-      all: unset;
-      cursor: pointer;
-      display: inline-block;
-      max-width: 100%;
-    }
-
+    #listTitleBtn { all: unset; cursor: pointer; display: inline-block; max-width: 100%; }
     #listTitle {
       margin: 0;
       font-size: 28px;
@@ -84,7 +71,7 @@
       cursor: pointer;
       display: grid;
       place-items: center;
-      background: rgba(255,255,255,0.10);
+      background: var(--soft);
       opacity: 0;
       transform: translateY(2px) scale(0.98);
       transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
@@ -98,7 +85,7 @@
       transform: translateY(0) scale(1);
     }
 
-    .edit-icon:hover { background: rgba(255,255,255,0.18); }
+    .edit-icon:hover { background: var(--soft2); }
 
     #titleHint {
       font-size: 12px;
@@ -126,6 +113,7 @@
       to   { opacity: 1; transform: scale(1) translateY(0); }
     }
 
+    /* Input row */
     .input-row {
       margin-top: 14px;
       display: flex;
@@ -158,19 +146,30 @@
       margin: 14px 0 0;
     }
 
-    /* Item row */
+    /* List item row */
     li {
       margin: 8px 0;
       padding: 10px 12px;
       background: var(--item);
       border-radius: 12px;
-      transition: background 0.2s;
+      transition: background 0.2s, opacity 0.2s;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
     li:hover { background: var(--item-hover); }
+    li.dragging { opacity: 0.4; }
+
+    .drag-handle {
+      cursor: grab;
+      font-size: 18px;
+      opacity: 0.6;
+      padding: 2px 4px;
+      user-select: none;
+    }
+
+    .drag-handle:active { cursor: grabbing; }
 
     .check {
       width: 20px;
@@ -192,7 +191,7 @@
     }
 
     .delete-item {
-      background: rgba(255,255,255,0.10);
+      background: var(--soft);
       border: none;
       width: 34px;
       height: 34px;
@@ -206,10 +205,9 @@
       color: white;
     }
 
-    .delete-item:hover {
-      background: rgba(255, 107, 107, 0.16);
-    }
+    .delete-item:hover { background: rgba(255, 107, 107, 0.16); }
 
+    /* Menu */
     #listMenuBtn {
       width: 46px;
       height: 46px;
@@ -252,7 +250,11 @@
 
     #savedLists li:hover { background: rgba(255,255,255,0.08); }
 
-    .list-name { flex: 1; cursor: pointer; user-select: none; }
+    .list-name {
+      flex: 1;
+      cursor: pointer;
+      user-select: none;
+    }
 
     .delete-list {
       background: transparent;
@@ -315,21 +317,15 @@
 
     <div class="header">
       <div class="title-wrap">
-
         <div class="title-row">
           <button id="listTitleBtn" aria-label="Rename current list">
             <h1 id="listTitle">Default</h1>
           </button>
-
-          <button class="edit-icon" id="editTitleBtn" aria-label="Edit list name" title="Rename">
-            ✏️
-          </button>
+          <button class="edit-icon" id="editTitleBtn" aria-label="Edit list name" title="Rename">✏️</button>
         </div>
 
         <div id="titleHint">Tap title to rename</div>
-
         <input id="listTitleInput" type="text" autocomplete="off" />
-
       </div>
 
       <button id="listMenuBtn" aria-label="Lists menu">☰</button>
@@ -358,6 +354,10 @@
   </div>
 
   <script>
+    // ------------------------
+    // Storage + helpers
+    // ------------------------
+
     let currentList = localStorage.getItem('currentList') || 'Default';
 
     function getLists() {
@@ -369,40 +369,60 @@
     }
 
     function normalizeName(name) {
-      return name.trim().replace(/\s+/g, ' ');
+      // no regex: collapse whitespace safely
+      return name.trim().split(/\s+/).join(' ');
     }
 
-    /* ------------------------
-       Migration: old string items -> object items
-       Old: ["Milk", "Eggs"]
-       New: [{ text:"Milk", done:false }, ...]
-    ------------------------ */
+    // Migration: old string items -> objects; also ensure arrays
     function ensureItemObjects(lists) {
       let changed = false;
+
       for (const listName of Object.keys(lists)) {
         const arr = lists[listName];
+
         if (!Array.isArray(arr)) {
           lists[listName] = [];
           changed = true;
           continue;
         }
+
         if (arr.length > 0 && typeof arr[0] === 'string') {
           lists[listName] = arr.map(t => ({ text: t, done: false }));
           changed = true;
+        } else {
+          lists[listName] = arr.map(it => ({
+            text: typeof it?.text === 'string' ? it.text : String(it),
+            done: !!it?.done
+          }));
         }
       }
+
       if (changed) saveLists(lists);
       return lists;
     }
 
-    /* ------------------------
-       Undo System (for deletes)
-    ------------------------ */
+    // Ensure Default exists
+    (function bootDefault() {
+      const lists = ensureItemObjects(getLists());
+      if (!lists.Default) {
+        lists.Default = [];
+        saveLists(lists);
+      }
+      if (!lists[currentList]) {
+        currentList = 'Default';
+        localStorage.setItem('currentList', currentList);
+      }
+    })();
+
+    // ------------------------
+    // Undo system (deletes)
+    // ------------------------
+
     const toast = document.getElementById('toast');
     const toastText = document.getElementById('toastText');
     const undoBtn = document.getElementById('undoBtn');
 
-    let undoState = null;  // { listName, index, value }
+    let undoState = null; // { listName, index, value }
     let toastTimer = null;
 
     function showToast(message, undoPayload) {
@@ -448,24 +468,47 @@
       }
     });
 
-    /* ------------------------
-       Core Renderer
-    ------------------------ */
+    // ------------------------
+    // Render rules
+    // Incomplete above completed, preserve manual order within each group
+    // ------------------------
+
+    function renderItemsForList(items) {
+      const active = items.filter(i => !i.done);
+      const done = items.filter(i => i.done);
+      return active.concat(done);
+    }
+
     function loadList() {
       const ul = document.getElementById('list');
       ul.innerHTML = '';
 
       const lists = ensureItemObjects(getLists());
-      const items = (lists[currentList] || []).slice();
+      const baseItems = lists[currentList] || [];
+      const items = renderItemsForList(baseItems);
 
-      // ✅ Completed items move to bottom
-      items.sort((a, b) => Number(a.done) - Number(b.done));
-
-      items.forEach((item, renderIndex) => {
+      items.forEach((item) => {
         const li = document.createElement('li');
         if (item.done) li.classList.add('completed');
 
-        // Checkbox
+        li.draggable = true;
+
+        li.addEventListener('dragstart', (e) => {
+          li.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        li.addEventListener('dragend', () => {
+          li.classList.remove('dragging');
+          saveOrderFromDOM();
+          loadList();
+        });
+
+        const handle = document.createElement('span');
+        handle.className = 'drag-handle';
+        handle.textContent = '☰';
+        handle.title = 'Drag to reorder';
+
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = 'check';
@@ -473,16 +516,14 @@
         cb.addEventListener('click', (e) => e.stopPropagation());
         cb.addEventListener('change', () => toggleDoneByIdentity(item));
 
-        // Text
-        const span = document.createElement('span');
-        span.className = 'item-text';
-        span.textContent = item.text;
-        span.addEventListener('click', () => {
+        const text = document.createElement('span');
+        text.className = 'item-text';
+        text.textContent = item.text;
+        text.addEventListener('click', () => {
           cb.checked = !cb.checked;
           cb.dispatchEvent(new Event('change'));
         });
 
-        // Delete button
         const del = document.createElement('button');
         del.className = 'delete-item';
         del.type = 'button';
@@ -493,9 +534,7 @@
           deleteItemByIdentity(item);
         });
 
-        li.appendChild(cb);
-        li.appendChild(span);
-        li.appendChild(del);
+        li.append(handle, cb, text, del);
         ul.appendChild(li);
       });
 
@@ -503,10 +542,7 @@
       loadSavedLists();
     }
 
-    /* ------------------------
-       Identity helpers (no IDs yet)
-       We'll match by text+done+first occurrence.
-    ------------------------ */
+    // Find the first matching item by identity (no IDs yet)
     function findItemIndex(listArr, target) {
       return listArr.findIndex(it => it.text === target.text && it.done === target.done);
     }
@@ -542,9 +578,45 @@
       loadList();
     }
 
-    /* ------------------------
-       Item Actions
-    ------------------------ */
+    // ------------------------
+    // Drag reorder: DOM -> saved order
+    // Enforce grouping: active then completed
+    // ------------------------
+
+    const listEl = document.getElementById('list');
+
+    listEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const dragging = document.querySelector('li.dragging');
+      if (!dragging) return;
+
+      const siblings = [...listEl.querySelectorAll('li:not(.dragging)')];
+      const after = siblings.find(li => e.clientY <= li.offsetTop + li.offsetHeight / 2);
+
+      if (after) listEl.insertBefore(dragging, after);
+      else listEl.appendChild(dragging);
+    });
+
+    function saveOrderFromDOM() {
+      const lists = ensureItemObjects(getLists());
+
+      const domItems = [...listEl.querySelectorAll('li')].map(li => {
+        const text = li.querySelector('.item-text')?.textContent ?? '';
+        const done = li.classList.contains('completed');
+        return { text, done };
+      });
+
+      const active = domItems.filter(i => !i.done);
+      const done = domItems.filter(i => i.done);
+
+      lists[currentList] = active.concat(done);
+      saveLists(lists);
+    }
+
+    // ------------------------
+    // Add item (insert at end of active group)
+    // ------------------------
+
     function addListItem() {
       const input = document.getElementById('listItemInput');
       const text = input.value.trim();
@@ -552,16 +624,23 @@
 
       const lists = ensureItemObjects(getLists());
       lists[currentList] = lists[currentList] || [];
-      lists[currentList].push({ text, done: false });
-      saveLists(lists);
 
+      const arr = lists[currentList];
+      const firstDoneIdx = arr.findIndex(i => i.done);
+      const newItem = { text, done: false };
+
+      if (firstDoneIdx === -1) arr.push(newItem);
+      else arr.splice(firstDoneIdx, 0, newItem);
+
+      saveLists(lists);
       input.value = '';
       loadList();
     }
 
-    /* ------------------------
-       List Actions
-    ------------------------ */
+    // ------------------------
+    // Lists menu: create/switch/delete
+    // ------------------------
+
     function createNewList() {
       const input = document.getElementById('newListName');
       const name = normalizeName(input.value);
@@ -623,9 +702,10 @@
       });
     }
 
-    /* ------------------------
-       Rename Title
-    ------------------------ */
+    // ------------------------
+    // Rename current list
+    // ------------------------
+
     const titleBtn = document.getElementById('listTitleBtn');
     const editTitleBtn = document.getElementById('editTitleBtn');
     const titleInput = document.getElementById('listTitleInput');
@@ -699,9 +779,10 @@
       if (renaming) commitRename();
     });
 
-    /* ------------------------
-       Menu Toggle
-    ------------------------ */
+    // ------------------------
+    // Menu toggle
+    // ------------------------
+
     const menuBtn = document.getElementById('listMenuBtn');
     const menu = document.getElementById('listMenu');
 
@@ -713,8 +794,8 @@
 
     document.addEventListener('click', (e) => {
       if (menu.style.display === 'block') {
-        const clickedInside = menu.contains(e.target) || menuBtn.contains(e.target);
-        if (!clickedInside) menu.style.display = 'none';
+        const inside = menu.contains(e.target) || menuBtn.contains(e.target);
+        if (!inside) menu.style.display = 'none';
       }
     });
 
@@ -722,9 +803,10 @@
       if (e.key === 'Escape') menu.style.display = 'none';
     });
 
-    /* ------------------------
-       Buttons + Enter key
-    ------------------------ */
+    // ------------------------
+    // Buttons + Enter key
+    // ------------------------
+
     document.getElementById('addItemBtn').addEventListener('click', addListItem);
     document.getElementById('createListBtn').addEventListener('click', createNewList);
 
@@ -736,9 +818,10 @@
       if (e.key === 'Enter') createNewList();
     });
 
-    /* ------------------------
-       Startup
-    ------------------------ */
+    // ------------------------
+    // Startup
+    // ------------------------
+
     loadList();
   </script>
 </body>
