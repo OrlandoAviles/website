@@ -83,8 +83,18 @@
     .drag-handle:active { cursor: grabbing; }
 
     .check { width: 20px; height: 20px; cursor: pointer; }
-    .item-text { flex: 1; overflow-wrap: anywhere; user-select: none; }
+
+    .item-text { flex: 1; overflow-wrap: anywhere; user-select: none; cursor: pointer; }
     li.completed .item-text { opacity: 0.6; text-decoration: line-through; }
+
+    .edit-input {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
 
     .delete-item {
       background: rgba(255,255,255,0.10); border: none; width: 34px; height: 34px;
@@ -157,6 +167,67 @@
   <div id="toast"><span id="toastText">Item deleted</span><button id="undoBtn">Undo</button></div>
 
   <script>
+    // ---------------- Rename List Title ----------------
+    const titleBtn = document.getElementById('listTitleBtn');
+    const editTitleBtn = document.getElementById('editTitleBtn');
+    const titleInput = document.getElementById('listTitleInput');
+    const titleHint = document.getElementById('titleHint');
+
+    let renamingList = false;
+    let oldListName = '';
+
+    function startRenameList() {
+      renamingList = true;
+      oldListName = currentList;
+      titleBtn.style.display = 'none';
+      editTitleBtn.style.display = 'none';
+      titleHint.style.display = 'none';
+      titleInput.style.display = 'block';
+      titleInput.value = currentList;
+      titleInput.focus();
+      titleInput.select();
+    }
+
+    function cancelRenameList() {
+      renamingList = false;
+      titleInput.style.display = 'none';
+      titleBtn.style.display = 'inline-block';
+      editTitleBtn.style.display = 'grid';
+      titleHint.style.display = 'block';
+      titleInput.value = '';
+    }
+
+    function commitRenameList() {
+      const newName = normalizeName(titleInput.value);
+      if (!newName || newName === oldListName) { cancelRenameList(); return; }
+
+      const lists = ensureItemObjects(getLists());
+      if (lists[newName]) {
+        alert('A list with that name already exists.');
+        titleInput.focus();
+        titleInput.select();
+        return;
+      }
+
+      lists[newName] = lists[oldListName] || [];
+      delete lists[oldListName];
+      saveLists(lists);
+
+      currentList = newName;
+      localStorage.setItem('currentList', currentList);
+      cancelRenameList();
+      loadList();
+    }
+
+    titleBtn.addEventListener('click', startRenameList);
+    editTitleBtn.addEventListener('click', startRenameList);
+    titleInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') commitRenameList();
+      if (e.key === 'Escape') cancelRenameList();
+    });
+    titleInput.addEventListener('blur', () => { if (renamingList) commitRenameList(); });
+
+    // ---------------- Core App ----------------
     let currentList = localStorage.getItem('currentList') || 'Default';
 
     function getLists() { return JSON.parse(localStorage.getItem('lists') || '{}'); }
@@ -211,9 +282,13 @@
         li.addEventListener('dragend', () => { li.classList.remove('dragging'); saveOrder(); });
 
         const handle = document.createElement('span'); handle.textContent = '☰'; handle.className = 'drag-handle';
+
         const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = item.done; cb.className = 'check';
         cb.onchange = () => { item.done = cb.checked; saveLists(lists); loadList(); };
+
         const span = document.createElement('span'); span.className = 'item-text'; span.textContent = item.text;
+        span.ondblclick = () => startEditItem(span, item, lists);
+
         const del = document.createElement('button'); del.textContent = '✕'; del.className = 'delete-item';
         del.onclick = () => {
           const removed = lists[currentList].splice(index,1)[0];
@@ -230,12 +305,35 @@
       loadSavedLists();
     }
 
+    function startEditItem(span, item, lists) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = item.text;
+      input.className = 'edit-input';
+
+      function finish(save) {
+        if (save) item.text = input.value.trim() || item.text;
+        saveLists(lists);
+        loadList();
+      }
+
+      input.onkeydown = e => {
+        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Escape') finish(false);
+      };
+      input.onblur = () => finish(true);
+
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+    }
+
     function saveOrder() {
       const ul = document.getElementById('list');
       const lists = ensureItemObjects(getLists());
       const newItems = [];
       ul.querySelectorAll('li').forEach(li => {
-        const text = li.querySelector('.item-text').textContent;
+        const text = li.querySelector('.item-text, .edit-input')?.value || li.querySelector('.item-text')?.textContent;
         const done = li.classList.contains('completed');
         newItems.push({ text, done });
       });
@@ -287,25 +385,19 @@
       });
     }
 
-    // EXPORT JSON
     document.getElementById('exportBtn').onclick = () => {
       const data = JSON.stringify(getLists(), null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'lists-backup.json';
-      a.click();
+      const a = document.createElement('a'); a.href = url; a.download = 'lists-backup.json'; a.click();
       URL.revokeObjectURL(url);
     };
 
-    // IMPORT JSON
     const importFile = document.getElementById('importFile');
     document.getElementById('importBtn').onclick = () => importFile.click();
 
     importFile.onchange = e => {
-      const file = e.target.files[0];
-      if (!file) return;
+      const file = e.target.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = evt => {
         try {
@@ -313,15 +405,9 @@
           if (typeof imported !== 'object') throw new Error();
           saveLists(imported);
           const names = Object.keys(imported);
-          if (names.length) {
-            currentList = names[0];
-            localStorage.setItem('currentList', currentList);
-          }
-          loadList();
-          alert('Lists imported successfully!');
-        } catch {
-          alert('Invalid JSON file.');
-        }
+          if (names.length) { currentList = names[0]; localStorage.setItem('currentList', currentList); }
+          loadList(); alert('Lists imported successfully!');
+        } catch { alert('Invalid JSON file.'); }
       };
       reader.readAsText(file);
       importFile.value = '';
