@@ -16,8 +16,6 @@
       --accent: #3498db;
       --accent-hover: #2980b9;
       --danger: #ff6b6b;
-      --soft: rgba(255,255,255,0.10);
-      --soft2: rgba(255,255,255,0.18);
     }
 
     * { box-sizing: border-box; }
@@ -42,293 +40,95 @@
       position: relative;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    /* Title + rename */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .title-wrap { flex: 1; min-width: 0; }
     .title-row { display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; }
 
     #listTitleBtn { all: unset; cursor: pointer; display: inline-block; max-width: 100%; }
-    #listTitle {
-      margin: 0;
-      font-size: 28px;
-      line-height: 1.1;
-      letter-spacing: 0.2px;
-      user-select: none;
-      overflow-wrap: anywhere;
-    }
+    #listTitle { margin: 0; font-size: 28px; line-height: 1.1; letter-spacing: 0.2px; user-select: none; overflow-wrap: anywhere; }
 
     .edit-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      background: var(--soft);
-      opacity: 0;
-      transform: translateY(2px) scale(0.98);
+      width: 34px; height: 34px; border-radius: 12px; border: none; cursor: pointer;
+      display: grid; place-items: center; background: rgba(255,255,255,0.10);
+      opacity: 0; transform: translateY(2px) scale(0.98);
       transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
-      padding: 0;
-      font-size: 16px;
+      padding: 0; font-size: 16px;
     }
+    .title-row:hover .edit-icon, .title-row:focus-within .edit-icon { opacity: 1; transform: translateY(0) scale(1); }
+    .edit-icon:hover { background: rgba(255,255,255,0.18); }
 
-    .title-row:hover .edit-icon,
-    .title-row:focus-within .edit-icon {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    .edit-icon:hover { background: var(--soft2); }
-
-    #titleHint {
-      font-size: 12px;
-      opacity: 0.75;
-      margin-top: 5px;
-      user-select: none;
-    }
+    #titleHint { font-size: 12px; opacity: 0.75; margin-top: 5px; user-select: none; }
 
     #listTitleInput {
-      display: none;
-      width: min(420px, 100%);
-      font-size: 22px;
-      font-weight: 800;
-      padding: 8px 10px;
-      border: none;
-      border-radius: 12px;
-      outline: none;
-      margin-top: 4px;
-      transform-origin: left center;
+      display: none; width: min(420px, 100%); font-size: 22px; font-weight: 800;
+      padding: 8px 10px; border: none; border-radius: 12px; outline: none; margin-top: 4px;
     }
 
-    .pop-in { animation: popIn 180ms ease-out; }
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(0.98) translateY(-2px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
-    }
+    .input-row { margin-top: 14px; display: flex; gap: 10px; }
+    input[type="text"] { width: 100%; padding: 10px 12px; border: none; border-radius: 10px; outline: none; }
 
-    /* Input row */
-    .input-row {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: none;
-      border-radius: 10px;
-      outline: none;
-    }
-
-    button {
-      padding: 10px 14px;
-      border: none;
-      border-radius: 10px;
-      background: var(--accent);
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
+    button { padding: 10px 14px; border: none; border-radius: 10px; background: var(--accent); color: white; cursor: pointer; font-weight: 600; }
     button:hover { background: var(--accent-hover); }
 
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 14px 0 0;
-    }
+    ul { list-style: none; padding: 0; margin: 14px 0 0; }
 
-    /* List item row */
     li {
-      margin: 8px 0;
-      padding: 10px 12px;
-      background: var(--item);
-      border-radius: 12px;
-      transition: background 0.2s, opacity 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      margin: 8px 0; padding: 10px 12px; background: var(--item); border-radius: 12px;
+      display: flex; align-items: center; gap: 10px; transition: background 0.2s, opacity 0.2s;
     }
-
     li:hover { background: var(--item-hover); }
     li.dragging { opacity: 0.4; }
 
-    .drag-handle {
-      cursor: grab;
-      font-size: 18px;
-      opacity: 0.6;
-      padding: 2px 4px;
-      user-select: none;
-    }
-
+    .drag-handle { cursor: grab; font-size: 18px; opacity: 0.6; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
 
-    .check {
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-      flex: 0 0 auto;
-    }
-
-    .item-text {
-      flex: 1;
-      overflow-wrap: anywhere;
-      user-select: none;
-      cursor: pointer;
-    }
-
-    li.completed .item-text {
-      opacity: 0.7;
-      text-decoration: line-through;
-    }
+    .check { width: 20px; height: 20px; cursor: pointer; }
+    .item-text { flex: 1; overflow-wrap: anywhere; user-select: none; }
+    li.completed .item-text { opacity: 0.6; text-decoration: line-through; }
 
     .delete-item {
-      background: var(--soft);
-      border: none;
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      flex: 0 0 auto;
-      padding: 0;
-      font-size: 16px;
-      color: white;
+      background: rgba(255,255,255,0.10); border: none; width: 34px; height: 34px;
+      border-radius: 12px; display: grid; place-items: center; cursor: pointer; font-size: 16px;
     }
-
     .delete-item:hover { background: rgba(255, 107, 107, 0.16); }
 
-    /* Menu */
-    #listMenuBtn {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
-      font-size: 22px;
-      padding: 0;
-      display: grid;
-      place-items: center;
-      flex: 0 0 auto;
-    }
+    #listMenuBtn { width: 46px; height: 46px; border-radius: 14px; font-size: 22px; padding: 0; display: grid; place-items: center; }
 
     #listMenu {
-      position: absolute;
-      top: 66px;
-      right: 18px;
-      width: 260px;
-      background: var(--panel-strong);
-      border-radius: 14px;
-      padding: 12px;
-      display: none;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.35);
-      z-index: 1000;
+      position: absolute; top: 66px; right: 18px; width: 260px; background: var(--panel-strong);
+      border-radius: 14px; padding: 12px; display: none; box-shadow: 0 12px 28px rgba(0,0,0,0.35); z-index: 1000;
     }
 
-    .menu-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .menu-row { display: flex; gap: 8px; align-items: center; }
+    .menu-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .menu-actions button { flex: 1; padding: 8px; font-size: 13px; }
 
-    #newListName { flex: 1; }
     #savedLists { margin-top: 10px; }
-
-    #savedLists li {
-      background: transparent;
-      padding: 8px 6px;
-      margin: 0;
-      border-radius: 10px;
-    }
-
+    #savedLists li { background: transparent; padding: 8px 6px; margin: 0; border-radius: 10px; }
     #savedLists li:hover { background: rgba(255,255,255,0.08); }
+    .list-name { flex: 1; cursor: pointer; user-select: none; }
+    .delete-list { background: transparent; border: none; color: var(--danger); font-size: 18px; cursor: pointer; }
 
-    .list-name {
-      flex: 1;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .delete-list {
-      background: transparent;
-      border: none;
-      color: var(--danger);
-      font-size: 18px;
-      cursor: pointer;
-      padding: 0 8px;
-      border-radius: 10px;
-    }
-
-    .delete-list:hover { background: rgba(255, 107, 107, 0.12); }
-
-    /* Undo toast */
     #toast {
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.86);
-      padding: 12px 14px;
-      border-radius: 14px;
-      display: none;
-      gap: 12px;
-      align-items: center;
-      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
-      z-index: 2000;
-      max-width: min(520px, 92vw);
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      background: rgba(0,0,0,0.86); padding: 12px 14px; border-radius: 14px; display: none;
+      gap: 12px; align-items: center; box-shadow: 0 14px 30px rgba(0,0,0,0.35); z-index: 2000;
     }
-
-    #toastText {
-      font-size: 14px;
-      opacity: 0.95;
-      user-select: none;
-      overflow-wrap: anywhere;
-    }
-
-    #undoBtn {
-      background: rgba(255,255,255,0.12);
-      padding: 8px 12px;
-      border-radius: 12px;
-      font-weight: 800;
-    }
-
-    #undoBtn:hover { background: rgba(255,255,255,0.20); }
-
-    @media (max-width: 480px) {
-      #listTitle { font-size: 24px; }
-      #listMenu { width: min(280px, 92vw); }
-      .input-row { flex-direction: column; }
-      .input-row button { width: 100%; }
-      #titleHint { display: none; }
-      .edit-icon { opacity: 1; }
-    }
+    #undoBtn { background: rgba(255,255,255,0.12); padding: 8px 12px; border-radius: 12px; font-weight: 800; }
   </style>
 </head>
-
 <body>
   <div class="app">
-
     <div class="header">
       <div class="title-wrap">
         <div class="title-row">
-          <button id="listTitleBtn" aria-label="Rename current list">
-            <h1 id="listTitle">Default</h1>
-          </button>
-          <button class="edit-icon" id="editTitleBtn" aria-label="Edit list name" title="Rename">✏️</button>
+          <button id="listTitleBtn"><h1 id="listTitle">Default</h1></button>
+          <button class="edit-icon" id="editTitleBtn">✏️</button>
         </div>
-
         <div id="titleHint">Tap title to rename</div>
-        <input id="listTitleInput" type="text" autocomplete="off" />
+        <input id="listTitleInput" type="text" />
       </div>
-
-      <button id="listMenuBtn" aria-label="Lists menu">☰</button>
+      <button id="listMenuBtn">☰</button>
     </div>
 
     <div class="input-row">
@@ -343,198 +143,86 @@
         <input type="text" id="newListName" placeholder="New list name..." />
         <button id="createListBtn">Create</button>
       </div>
+
+      <div class="menu-actions">
+        <button id="exportBtn">Export JSON</button>
+        <button id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none" />
+      </div>
+
       <ul id="savedLists"></ul>
     </div>
-
   </div>
 
-  <div id="toast" role="status" aria-live="polite">
-    <div id="toastText">Item deleted</div>
-    <button id="undoBtn" type="button">Undo</button>
-  </div>
+  <div id="toast"><span id="toastText">Item deleted</span><button id="undoBtn">Undo</button></div>
 
   <script>
-    // ------------------------
-    // Storage + helpers
-    // ------------------------
-
     let currentList = localStorage.getItem('currentList') || 'Default';
 
-    function getLists() {
-      return JSON.parse(localStorage.getItem('lists') || '{}');
-    }
+    function getLists() { return JSON.parse(localStorage.getItem('lists') || '{}'); }
+    function saveLists(l) { localStorage.setItem('lists', JSON.stringify(l)); }
+    function normalizeName(n) { return n.trim().replace(/\s+/g, ' '); }
 
-    function saveLists(lists) {
-      localStorage.setItem('lists', JSON.stringify(lists));
-    }
-
-    function normalizeName(name) {
-      // no regex: collapse whitespace safely
-      return name.trim().split(/\s+/).join(' ');
-    }
-
-    // Migration: old string items -> objects; also ensure arrays
     function ensureItemObjects(lists) {
       let changed = false;
-
-      for (const listName of Object.keys(lists)) {
-        const arr = lists[listName];
-
-        if (!Array.isArray(arr)) {
-          lists[listName] = [];
+      for (const k of Object.keys(lists)) {
+        if (!Array.isArray(lists[k])) { lists[k] = []; changed = true; continue; }
+        if (lists[k].length && typeof lists[k][0] === 'string') {
+          lists[k] = lists[k].map(t => ({ text: t, done: false }));
           changed = true;
-          continue;
-        }
-
-        if (arr.length > 0 && typeof arr[0] === 'string') {
-          lists[listName] = arr.map(t => ({ text: t, done: false }));
-          changed = true;
-        } else {
-          lists[listName] = arr.map(it => ({
-            text: typeof it?.text === 'string' ? it.text : String(it),
-            done: !!it?.done
-          }));
         }
       }
-
       if (changed) saveLists(lists);
       return lists;
     }
 
-    // Ensure Default exists
-    (function bootDefault() {
-      const lists = ensureItemObjects(getLists());
-      if (!lists.Default) {
-        lists.Default = [];
-        saveLists(lists);
-      }
-      if (!lists[currentList]) {
-        currentList = 'Default';
-        localStorage.setItem('currentList', currentList);
-      }
-    })();
-
-    // ------------------------
-    // Undo system (deletes)
-    // ------------------------
-
     const toast = document.getElementById('toast');
     const toastText = document.getElementById('toastText');
     const undoBtn = document.getElementById('undoBtn');
+    let undoState = null; let toastTimer = null;
 
-    let undoState = null; // { listName, index, value }
-    let toastTimer = null;
-
-    function showToast(message, undoPayload) {
-      toastText.textContent = message;
+    function showToast(msg, payload) {
+      toastText.textContent = msg;
       toast.style.display = 'flex';
-      undoState = undoPayload;
-
+      undoState = payload;
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => hideToast(), 5200);
+      toastTimer = setTimeout(() => hideToast(), 5000);
     }
-
-    function hideToast() {
-      toast.style.display = 'none';
-      undoState = null;
-      clearTimeout(toastTimer);
-      toastTimer = null;
-    }
-
-    function performUndo() {
+    function hideToast() { toast.style.display = 'none'; undoState = null; clearTimeout(toastTimer); }
+    undoBtn.onclick = () => {
       if (!undoState) return;
-
       const lists = ensureItemObjects(getLists());
       const { listName, index, value } = undoState;
-
-      lists[listName] = lists[listName] || [];
-      const safeIndex = Math.max(0, Math.min(index, lists[listName].length));
-      lists[listName].splice(safeIndex, 0, value);
-
+      lists[listName].splice(index, 0, value);
       saveLists(lists);
-      hideToast();
-      loadList();
-    }
-
-    undoBtn.addEventListener('click', performUndo);
-
-    document.addEventListener('keydown', (e) => {
-      const key = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && key === 'z') {
-        if (undoState) {
-          e.preventDefault();
-          performUndo();
-        }
-      }
-    });
-
-    // ------------------------
-    // Render rules
-    // Incomplete above completed, preserve manual order within each group
-    // ------------------------
-
-    function renderItemsForList(items) {
-      const active = items.filter(i => !i.done);
-      const done = items.filter(i => i.done);
-      return active.concat(done);
-    }
+      hideToast(); loadList();
+    };
 
     function loadList() {
-      const ul = document.getElementById('list');
-      ul.innerHTML = '';
-
+      const ul = document.getElementById('list'); ul.innerHTML = '';
       const lists = ensureItemObjects(getLists());
-      const baseItems = lists[currentList] || [];
-      const items = renderItemsForList(baseItems);
+      const items = lists[currentList] || [];
 
-      items.forEach((item) => {
-        const li = document.createElement('li');
+      items.forEach((item, index) => {
+        const li = document.createElement('li'); li.draggable = true;
         if (item.done) li.classList.add('completed');
 
-        li.draggable = true;
+        li.addEventListener('dragstart', () => li.classList.add('dragging'));
+        li.addEventListener('dragend', () => { li.classList.remove('dragging'); saveOrder(); });
 
-        li.addEventListener('dragstart', (e) => {
-          li.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-
-        li.addEventListener('dragend', () => {
-          li.classList.remove('dragging');
-          saveOrderFromDOM();
+        const handle = document.createElement('span'); handle.textContent = '☰'; handle.className = 'drag-handle';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = item.done; cb.className = 'check';
+        cb.onchange = () => { item.done = cb.checked; saveLists(lists); loadList(); };
+        const span = document.createElement('span'); span.className = 'item-text'; span.textContent = item.text;
+        const del = document.createElement('button'); del.textContent = '✕'; del.className = 'delete-item';
+        del.onclick = () => {
+          const removed = lists[currentList].splice(index,1)[0];
+          saveLists(lists);
+          showToast('Item deleted', { listName: currentList, index, value: removed });
           loadList();
-        });
+        };
 
-        const handle = document.createElement('span');
-        handle.className = 'drag-handle';
-        handle.textContent = '☰';
-        handle.title = 'Drag to reorder';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'check';
-        cb.checked = !!item.done;
-        cb.addEventListener('click', (e) => e.stopPropagation());
-        cb.addEventListener('change', () => toggleDoneByIdentity(item));
-
-        const text = document.createElement('span');
-        text.className = 'item-text';
-        text.textContent = item.text;
-        text.addEventListener('click', () => {
-          cb.checked = !cb.checked;
-          cb.dispatchEvent(new Event('change'));
-        });
-
-        const del = document.createElement('button');
-        del.className = 'delete-item';
-        del.type = 'button';
-        del.title = 'Delete item';
-        del.textContent = '✕';
-        del.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteItemByIdentity(item);
-        });
-
-        li.append(handle, cb, text, del);
+        li.append(handle, cb, span, del);
         ul.appendChild(li);
       });
 
@@ -542,285 +230,110 @@
       loadSavedLists();
     }
 
-    // Find the first matching item by identity (no IDs yet)
-    function findItemIndex(listArr, target) {
-      return listArr.findIndex(it => it.text === target.text && it.done === target.done);
-    }
-
-    function toggleDoneByIdentity(target) {
+    function saveOrder() {
+      const ul = document.getElementById('list');
       const lists = ensureItemObjects(getLists());
-      const arr = lists[currentList] || [];
-
-      const idx = findItemIndex(arr, target);
-      if (idx === -1) return;
-
-      arr[idx].done = !arr[idx].done;
-      saveLists(lists);
-      loadList();
-    }
-
-    function deleteItemByIdentity(target) {
-      const lists = ensureItemObjects(getLists());
-      const arr = lists[currentList] || [];
-
-      const idx = findItemIndex(arr, target);
-      if (idx === -1) return;
-
-      const removed = arr.splice(idx, 1)[0];
-      saveLists(lists);
-
-      showToast('Item deleted', {
-        listName: currentList,
-        index: idx,
-        value: removed
-      });
-
-      loadList();
-    }
-
-    // ------------------------
-    // Drag reorder: DOM -> saved order
-    // Enforce grouping: active then completed
-    // ------------------------
-
-    const listEl = document.getElementById('list');
-
-    listEl.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      const dragging = document.querySelector('li.dragging');
-      if (!dragging) return;
-
-      const siblings = [...listEl.querySelectorAll('li:not(.dragging)')];
-      const after = siblings.find(li => e.clientY <= li.offsetTop + li.offsetHeight / 2);
-
-      if (after) listEl.insertBefore(dragging, after);
-      else listEl.appendChild(dragging);
-    });
-
-    function saveOrderFromDOM() {
-      const lists = ensureItemObjects(getLists());
-
-      const domItems = [...listEl.querySelectorAll('li')].map(li => {
-        const text = li.querySelector('.item-text')?.textContent ?? '';
+      const newItems = [];
+      ul.querySelectorAll('li').forEach(li => {
+        const text = li.querySelector('.item-text').textContent;
         const done = li.classList.contains('completed');
-        return { text, done };
+        newItems.push({ text, done });
       });
-
-      const active = domItems.filter(i => !i.done);
-      const done = domItems.filter(i => i.done);
-
-      lists[currentList] = active.concat(done);
+      lists[currentList] = newItems;
       saveLists(lists);
     }
 
-    // ------------------------
-    // Add item (insert at end of active group)
-    // ------------------------
+    document.getElementById('list').addEventListener('dragover', e => {
+      e.preventDefault();
+      const dragging = document.querySelector('.dragging');
+      const after = [...e.currentTarget.querySelectorAll('li:not(.dragging)')]
+        .find(li => e.clientY <= li.offsetTop + li.offsetHeight / 2);
+      if (after) e.currentTarget.insertBefore(dragging, after);
+      else e.currentTarget.appendChild(dragging);
+    });
 
     function addListItem() {
       const input = document.getElementById('listItemInput');
-      const text = input.value.trim();
-      if (!text) return;
-
+      const text = input.value.trim(); if (!text) return;
       const lists = ensureItemObjects(getLists());
       lists[currentList] = lists[currentList] || [];
-
-      const arr = lists[currentList];
-      const firstDoneIdx = arr.findIndex(i => i.done);
-      const newItem = { text, done: false };
-
-      if (firstDoneIdx === -1) arr.push(newItem);
-      else arr.splice(firstDoneIdx, 0, newItem);
-
-      saveLists(lists);
-      input.value = '';
-      loadList();
+      lists[currentList].push({ text, done: false });
+      saveLists(lists); input.value=''; loadList();
     }
-
-    // ------------------------
-    // Lists menu: create/switch/delete
-    // ------------------------
 
     function createNewList() {
       const input = document.getElementById('newListName');
-      const name = normalizeName(input.value);
-      if (!name) return;
-
+      const name = normalizeName(input.value); if (!name) return;
       const lists = ensureItemObjects(getLists());
       if (!lists[name]) lists[name] = [];
-
-      saveLists(lists);
-      switchList(name);
-      input.value = '';
+      saveLists(lists); switchList(name); input.value='';
     }
 
-    function switchList(name) {
-      currentList = name;
-      localStorage.setItem('currentList', name);
-      loadList();
-    }
-
+    function switchList(name) { currentList = name; localStorage.setItem('currentList', name); loadList(); }
     function deleteList(name) {
-      const lists = ensureItemObjects(getLists());
-      delete lists[name];
-      saveLists(lists);
-
-      if (currentList === name) {
-        const remaining = Object.keys(lists);
-        currentList = remaining[0] || 'Default';
-        localStorage.setItem('currentList', currentList);
-      }
-
-      loadList();
+      const lists = ensureItemObjects(getLists()); delete lists[name]; saveLists(lists);
+      if (currentList === name) { const keys = Object.keys(lists); currentList = keys[0] || 'Default'; }
+      localStorage.setItem('currentList', currentList); loadList();
     }
 
     function loadSavedLists() {
-      const ul = document.getElementById('savedLists');
-      ul.innerHTML = '';
-
+      const ul = document.getElementById('savedLists'); ul.innerHTML='';
       const lists = ensureItemObjects(getLists());
-
       Object.keys(lists).forEach(name => {
         const li = document.createElement('li');
-
-        const span = document.createElement('span');
-        span.textContent = name;
-        span.className = 'list-name';
-        span.onclick = () => switchList(name);
-
-        const del = document.createElement('button');
-        del.textContent = '✕';
-        del.className = 'delete-list';
-        del.onclick = (e) => {
-          e.stopPropagation();
-          deleteList(name);
-        };
-
-        li.appendChild(span);
-        li.appendChild(del);
-        ul.appendChild(li);
+        const span = document.createElement('span'); span.textContent = name; span.className='list-name'; span.onclick=()=>switchList(name);
+        const del = document.createElement('button'); del.textContent='✕'; del.className='delete-list'; del.onclick=(e)=>{e.stopPropagation();deleteList(name);};
+        li.append(span,del); ul.appendChild(li);
       });
     }
 
-    // ------------------------
-    // Rename current list
-    // ------------------------
+    // EXPORT JSON
+    document.getElementById('exportBtn').onclick = () => {
+      const data = JSON.stringify(getLists(), null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lists-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
 
-    const titleBtn = document.getElementById('listTitleBtn');
-    const editTitleBtn = document.getElementById('editTitleBtn');
-    const titleInput = document.getElementById('listTitleInput');
-    const titleHint = document.getElementById('titleHint');
+    // IMPORT JSON
+    const importFile = document.getElementById('importFile');
+    document.getElementById('importBtn').onclick = () => importFile.click();
 
-    let renaming = false;
-    let renameOldName = '';
+    importFile.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (typeof imported !== 'object') throw new Error();
+          saveLists(imported);
+          const names = Object.keys(imported);
+          if (names.length) {
+            currentList = names[0];
+            localStorage.setItem('currentList', currentList);
+          }
+          loadList();
+          alert('Lists imported successfully!');
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+      importFile.value = '';
+    };
 
-    function startRename() {
-      renaming = true;
-      renameOldName = currentList;
-
-      titleBtn.style.display = 'none';
-      editTitleBtn.style.display = 'none';
-      titleHint.style.display = 'none';
-
-      titleInput.style.display = 'block';
-      titleInput.classList.remove('pop-in');
-      void titleInput.offsetWidth;
-      titleInput.classList.add('pop-in');
-
-      titleInput.value = currentList;
-      titleInput.focus();
-      titleInput.select();
-    }
-
-    function cancelRename() {
-      renaming = false;
-      titleInput.style.display = 'none';
-      titleBtn.style.display = 'inline-block';
-      editTitleBtn.style.display = 'grid';
-      titleHint.style.display = 'block';
-      titleInput.value = '';
-    }
-
-    function commitRename() {
-      const newName = normalizeName(titleInput.value);
-
-      if (!newName) { cancelRename(); return; }
-      if (newName === renameOldName) { cancelRename(); return; }
-
-      const lists = ensureItemObjects(getLists());
-
-      if (Object.prototype.hasOwnProperty.call(lists, newName)) {
-        alert('A list with that name already exists.');
-        titleInput.focus();
-        titleInput.select();
-        return;
-      }
-
-      lists[newName] = lists[renameOldName] || [];
-      delete lists[renameOldName];
-      saveLists(lists);
-
-      currentList = newName;
-      localStorage.setItem('currentList', currentList);
-
-      cancelRename();
-      loadList();
-    }
-
-    titleBtn.addEventListener('click', startRename);
-    editTitleBtn.addEventListener('click', startRename);
-
-    titleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') commitRename();
-      if (e.key === 'Escape') cancelRename();
-    });
-
-    titleInput.addEventListener('blur', () => {
-      if (renaming) commitRename();
-    });
-
-    // ------------------------
-    // Menu toggle
-    // ------------------------
+    document.getElementById('addItemBtn').onclick = addListItem;
+    document.getElementById('createListBtn').onclick = createNewList;
 
     const menuBtn = document.getElementById('listMenuBtn');
     const menu = document.getElementById('listMenu');
-
-    menuBtn.onclick = (e) => {
-      e.stopPropagation();
-      const isHidden = getComputedStyle(menu).display === 'none';
-      menu.style.display = isHidden ? 'block' : 'none';
-    };
-
-    document.addEventListener('click', (e) => {
-      if (menu.style.display === 'block') {
-        const inside = menu.contains(e.target) || menuBtn.contains(e.target);
-        if (!inside) menu.style.display = 'none';
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') menu.style.display = 'none';
-    });
-
-    // ------------------------
-    // Buttons + Enter key
-    // ------------------------
-
-    document.getElementById('addItemBtn').addEventListener('click', addListItem);
-    document.getElementById('createListBtn').addEventListener('click', createNewList);
-
-    document.getElementById('listItemInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addListItem();
-    });
-
-    document.getElementById('newListName').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') createNewList();
-    });
-
-    // ------------------------
-    // Startup
-    // ------------------------
+    menuBtn.onclick = e => { e.stopPropagation(); menu.style.display = menu.style.display==='block'?'none':'block'; };
+    document.addEventListener('click', e => { if (!menu.contains(e.target) && e.target!==menuBtn) menu.style.display='none'; });
 
     loadList();
   </script>
