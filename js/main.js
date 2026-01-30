@@ -11,3 +11,4 @@ loadComponent("dojo", "components/dojo.html");
 loadComponent("vfa", "components/vfa.html");
 loadComponent("projects", "components/projects.html");
 loadComponent("about", "components/about.html");
+loadComponent("site-footer", "components/footer.html");
