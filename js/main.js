@@ -2,10 +2,12 @@ async function loadComponent(id, file) {
   const res = await fetch(file);
   const html = await res.text();
   document.getElementById(id).innerHTML = html;
+
+  if (id === "projects") renderProjects();
+  if (id === "dojo") renderDojoFeatures();
 }
 
 loadComponent("site-header", "components/header.html");
-loadComponent("site-footer", "components/footer.html");
 loadComponent("hero", "components/hero.html");
 loadComponent("dojo", "components/dojo.html");
 loadComponent("vfa", "components/vfa.html");
@@ -13,20 +15,25 @@ loadComponent("projects", "components/projects.html");
 loadComponent("about", "components/about.html");
 loadComponent("site-footer", "components/footer.html");
 
+
 const projects = [
   {
     title: "Tarot App",
-    description: "A card reading app driven by structured content and expandable decks."
+    description: "A card reading app driven by structured content and expandable decks.",
+    url: "apps/Tarot/index.html"
   },
   {
     title: "List App",
-    description: "A productivity focused list manager with strong UX fundamentals."
+    description: "A productivity focused list manager with strong UX fundamentals.",
+    url: "apps/List.html"
   },
   {
     title: "Journal App",
-    description: "A writing and reflection tool exploring persistent state and UI flow."
+    description: "A writing and reflection tool exploring persistent state and UI flow.",
+    url: "apps/Journal.html"
   }
 ];
+
 
 const dojoFeatures = [
   {
@@ -49,12 +56,13 @@ function renderProjects() {
   if (!grid) return;
 
   grid.innerHTML = projects.map(p => `
-    <div class="card">
+    <a class="card project-card" href="${p.url}">
       <h4>${p.title}</h4>
       <p>${p.description}</p>
-    </div>
+    </a>
   `).join("");
 }
+
 
 function renderDojoFeatures() {
   const grid = document.getElementById("dojo-features-grid");
@@ -66,14 +74,4 @@ function renderDojoFeatures() {
       <p>${f.description}</p>
     </div>
   `).join("");
-}
-
-
-async function loadComponent(id, file) {
-  const res = await fetch(file);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-
-  if (id === "projects") renderProjects();
-  if (id === "dojo") renderDojoFeatures();
 }
