@@ -1,357 +1,112 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Creative Dojo</title>
-
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-
-  <body>
-    <!-- Random particle background -->
-    <canvas id="space"></canvas>
-    <div class="scanlines"></div>
-
-    <h1>Creative Dojo</h1>
-    <div class="subtitle">Development Training Grounds</div>
-
-    <!-- BOOKMARKED APPS -->
-    <div class="section" id="bookmarksSection">
-      <div class="section-title">Bookmarked Apps</div>
-      <div class="section-subtitle">
-        Bookmark apps from Featured Apps below. Drag to reorder your shelf.
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creative Dojo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="site-header">
+    <header class="site-header">
+      <div class="container header-inner">
+        <h1 class="logo">Creative Dojo</h1>
+        <nav class="nav">
+          <a href="#dojo">RPG Maker</a>
+          <a href="#vfa">VFA Game</a>
+          <a href="#projects">Other Projects</a>
+          <a href="#about">About Me</a>
+        </nav>
       </div>
-
-      <div class="bookmark-toolbar">
-        <button class="reset-btn" id="resetBookmarksBtn">
-          Reset to Orlando defaults
-        </button>
-        <span class="drag-hint">Tip: drag cards to reorder</span>
-        <span class="filter-count" id="bookmarkCount"></span>
+    </header>
+  </div>
+    
+  <main>
+    <section id="hero" class="hero">
+      <div class="container hero-inner">
+        <h2>I build worlds, tools, and interactive web experiences.</h2>
+        <p>
+          Creative Dojo is my browser based RPG creation suite. It powers my
+          playable game project and showcases my work in front end development,
+          UI systems, and interactive design.
+        </p>
+        <div class="hero-buttons">
+          <a href="#dojo" class="btn primary">Explore the Dev Suite</a>
+          <a href="#vfa" class="btn secondary">Play VFA</a>
+        </div>
       </div>
+    </section>
+    <section id="dojo" class="section">
+      <div class="container">
+        <h3>Creative Dojo – RPG Maker Dev Suite</h3>
+        <p>
+          A set of in browser tools for building game content including maps,
+          story scenes, items, and systems. Designed like a custom CMS for RPG
+          worlds.
+        </p>
 
-      <div class="bookmark-shelf" id="bookmarkShelf"></div>
-    </div>
-
-    <div class="divider" id="bookmarkDivider"></div>
-
-    <!-- FLAGSHIP -->
-    <div class="section">
-      <div class="section-title">Veldara Project</div>
-      <div class="section-subtitle">
-        Two games. One universe.
+        <div class="card-grid">
+          <div class="card">
+            <h4>Map Editor</h4>
+            <p>Create and edit game areas, layouts, and navigation.</p>
+          </div>
+          <div class="card">
+            <h4>Story Editor</h4>
+            <p>Write scenes, dialogue, and branching narrative events.</p>
+          </div>
+          <div class="card">
+            <h4>Item & Data Index</h4>
+            <p>Manage items, characters, and game data in structured form.</p>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="banner-grid">
-        <a class="card-link" href="VeldaraFlagship/index.html">
-          <div class="card banner">
-            <div class="card-title-row">
-              <div class="card-icon">🗺️</div>
-              <div class="card-title">Veldara: Forgotten Archives</div>
-            </div>
-            <p>
-              A mobile-first top-down RPG prototype built in vanilla JavaScript.
-              Explore a field scene with joystick controls and random
-              encounters. Battles switch into an ATB-based “paradigm combat”
-              system where party roles can be shifted under time pressure.
-            </p>
-            <div class="card-meta">
-              <span class="badge soon">Flagship</span>
-              <span class="badge mobile">Mobile</span>
-              <span class="badge proto">Prototype</span>
-            </div>
-          </div>
-        </a>
-
-        <a class="card-link" href="VeldaraFlagship/combatsim.html">
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">⚔️</div>
-              <div class="card-title">ATB Combat Engine</div>
-            </div>
-            <p>
-              Standalone battle module used by the main game (3v1 encounter
-              prototype).
-            </p>
-            <div class="card-meta">
-              <span class="badge proto">Combat</span>
-              <span class="badge desktop">Desktop</span>
-            </div>
-          </div>
-        </a>
+    <section id="vfa" class="section alt">
+      <div class="container">
+        <h3>Veldara: Forgotten Archives</h3>
+        <p>
+          A playable RPG experience built using the Creative Dojo toolset. This
+          project demonstrates how my editor systems translate into an actual
+          game.
+        </p>
+        <a href="#" class="btn primary">Launch Demo</a>
       </div>
-    </div>
+    </section>
 
-    <div class="divider"></div>
-
-    <!-- FEATURED APPS -->
-    <div class="section">
-      <div class="section-title">Featured Apps</div>
-      <div class="section-subtitle">
-        Tools, minigames, and experiments. Bookmark from here to pin your
-        favorites above.
+    <section id="projects" class="section">
+      <div class="container">
+        <h3>Other Projects</h3>
+        <div class="card-grid">
+          <div class="card">
+            <h4>Tarot App</h4>
+            <p>A card reading app driven by structured content and expandable decks.</p>
+          </div>
+          <div class="card">
+            <h4>List App</h4>
+            <p>A productivity focused list manager with strong UX fundamentals.</p>
+          </div>
+          <div class="card">
+            <h4>Journal App</h4>
+            <p>A writing and reflection tool exploring persistent state and UI flow.</p>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="filterbar" id="filterbar">
-        <span class="filter-label">Filter:</span>
-
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
-        <button class="filter-btn" data-filter="tool">Tool</button>
-        <button class="filter-btn" data-filter="mobile">Mobile</button>
-        <button class="filter-btn" data-filter="desktop">Desktop</button>
-        <button class="filter-btn" data-filter="minigame">Minigame</button>
-        <button class="filter-btn" data-filter="prototype">Prototype</button>
-
-        <span class="filter-count" id="filterCount"></span>
+    <section id="about" class="section alt">
+      <div class="container">
+        <h3>About Me</h3>
+        <p>
+          I am a front end developer focused on interactive tools, creative
+          systems, and user friendly interfaces. I enjoy building applications
+          that combine structure, storytelling, and visual design.
+        </p>
       </div>
+    </section>
 
-      <div class="card-container" id="featuredGrid">
-        <!-- Tools -->
-        <a
-          class="card-link"
-          href="FeaturedApps/List.html"
-          data-app="list"
-          data-tags="desktop tool stable"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">📋</div>
-              <div class="card-title">Lists App</div>
-            </div>
-            <p>A simple task list app built with HTML, CSS, and JavaScript.</p>
-            <div class="card-meta">
-              <span class="badge ready">Stable</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
+  <div id="site-footer"></div>
 
-        <a
-          class="card-link"
-          href="FeaturedApps/Journal.html"
-          data-app="journal"
-          data-tags="desktop tool stable"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">📓</div>
-              <div class="card-title">Daily Journal</div>
-            </div>
-            <p>
-              A lightweight daily journal for writing and progress tracking.
-            </p>
-            <div class="card-meta">
-              <span class="badge ready">Ready</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/PixelSpriteEditor.html"
-          data-app="sprite"
-          data-tags="desktop tool prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🎨</div>
-              <div class="card-title">Pixel Sprite Editor</div>
-            </div>
-            <p>Create pixel art sprites for games, icons, and spritesheets.</p>
-            <div class="card-meta">
-              <span class="badge proto">Prototype</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/Beatpad.html"
-          data-app="beatpad"
-          data-tags="desktop tool prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🎛️</div>
-              <div class="card-title">Web Audio Beatpad</div>
-            </div>
-            <p>A Web Audio tool for SFX, loops, and game music experiments.</p>
-            <div class="card-meta">
-              <span class="badge proto">Prototype</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/ParticleEngine.html"
-          data-app="particles"
-          data-tags="desktop tool prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">✨</div>
-              <div class="card-title">Particle Engine</div>
-            </div>
-            <p>
-              A reusable FX system for impact sparks, healing glow, and
-              UI/gameplay polish.
-            </p>
-            <div class="card-meta">
-              <span class="badge soon">Coming Soon</span>
-              <span class="badge proto">System</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <!-- Games -->
-        <a
-          class="card-link"
-          href="FeaturedApps/PocketDodge.html"
-          data-app="pocketdodge"
-          data-tags="mobile minigame prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🕹️</div>
-              <div class="card-title">Pocket Dodge</div>
-            </div>
-            <p>
-              Mobile joystick minigame: dodge hazards, collect stars, survive.
-            </p>
-            <div class="card-meta">
-              <span class="badge ready">Playable</span>
-              <span class="badge mobile">Mobile</span>
-              <span class="badge game">Minigame</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/Shmup.html"
-          data-app="shmup"
-          data-tags="mobile minigame prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🚀</div>
-              <div class="card-title">Mobile Shmup</div>
-            </div>
-            <p>Canvas shoot-em-up with waves, lives, and touch controls.</p>
-            <div class="card-meta">
-              <span class="badge proto">Prototype</span>
-              <span class="badge mobile">Mobile</span>
-              <span class="badge game">Arcade</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/Blackjack.html"
-          data-app="blackjack"
-          data-tags="desktop minigame"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🃏</div>
-              <div class="card-title">Blackjack</div>
-            </div>
-            <p>Vanilla JS blackjack with keyboard shortcuts and clean UI.</p>
-            <div class="card-meta">
-              <span class="badge ready">Ready</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge game">Card Game</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/TarotApp/index.html"
-          data-app="tarot"
-          data-tags="desktop tool"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🔮</div>
-              <div class="card-title">Tarot</div>
-            </div>
-            <p>
-              Draw cards, track readings, and explore spreads from your Creative
-              Dojo.
-            </p>
-            <div class="card-meta">
-              <span class="badge ready">Ready</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge tool">Tool</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/TowerOfVeldara/index.html"
-          data-app="dungeoncrawler"
-          data-tags="mobile prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🗝️</div>
-              <div class="card-title">Tower of Veldara</div>
-            </div>
-            <p>
-             Explore, fight, loot, level up, and face boss gates in a procedural 3D dungeon.
-            </p>
-            <div class="card-meta">
-              <span class="badge mobile">Mobile</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge game">Game</span>
-            </div>
-          </div>
-        </a>
-
-        <a
-          class="card-link"
-          href="FeaturedApps/Slots.html"
-          data-app="slots"
-          data-tags="desktop minigame prototype"
-        >
-          <div class="card">
-            <div class="card-title-row">
-              <div class="card-icon">🎰</div>
-              <div class="card-title">Slot Machine</div>
-            </div>
-            <p>Simple slot machine with async reel spins and win states.</p>
-            <div class="card-meta">
-              <span class="badge ready">Ready</span>
-              <span class="badge desktop">Desktop</span>
-              <span class="badge game">Luck</span>
-            </div>
-          </div>
-        </a>
-      </div>
-    </div>
-
-    <div class="footer-note">
-      <p>
-        <strong>Design rules:</strong> Local-first · Single-file · No backend.
-      </p>
-    </div>
-
-    <!-- JS -->
-    <script type="module" src="js/main.js"></script>
-  </body>
+  <script src="main.js"></script>
+</body>
 </html>

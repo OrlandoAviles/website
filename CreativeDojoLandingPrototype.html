@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orlando Aviles | Creative Dojo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      background: #0f1220;
+      color: #e6e8f0;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .site-header {
+      background: #151935;
+      border-bottom: 1px solid #2a2f55;
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .nav a {
+      color: #cfd3ff;
+      margin-left: 1.5rem;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    .nav a:hover {
+      color: #ffffff;
+    }
+
+    .hero {
+      padding: 5rem 0 4rem;
+      text-align: center;
+      background: linear-gradient(180deg, #151935 0%, #0f1220 100%);
+    }
+
+    .hero h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      max-width: 650px;
+      margin: 0 auto 2rem;
+      color: #b8bde6;
+    }
+
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.7rem 1.4rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .btn.primary {
+      background: #6c63ff;
+      color: white;
+    }
+
+    .btn.secondary {
+      background: transparent;
+      border: 1px solid #6c63ff;
+      color: #cfd3ff;
+    }
+
+    .section {
+      padding: 4rem 0;
+    }
+
+    .section.alt {
+      background: #141833;
+    }
+
+    .section h3 {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .section p {
+      max-width: 700px;
+      margin-bottom: 2rem;
+      color: #b8bde6;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #1b2042;
+      padding: 1.5rem;
+      border-radius: 10px;
+      border: 1px solid #2a2f55;
+    }
+
+    .card h4 {
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+
+    .site-footer {
+      padding: 2rem 0;
+      text-align: center;
+      border-top: 1px solid #2a2f55;
+      color: #8f95c9;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="logo">Creative Dojo</h1>
+      <nav class="nav">
+        <a href="#dojo">RPG Maker</a>
+        <a href="#vfa">VFA Game</a>
+        <a href="#projects">Other Projects</a>
+        <a href="#about">About Me</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-inner">
+      <h2>I build worlds, tools, and interactive web experiences.</h2>
+      <p>
+        Creative Dojo is my browser based RPG creation suite. It powers my
+        playable game project and showcases my work in front end development,
+        UI systems, and interactive design.
+      </p>
+      <div class="hero-buttons">
+        <a href="#dojo" class="btn primary">Explore the Dev Suite</a>
+        <a href="#vfa" class="btn secondary">Play VFA</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="dojo" class="section">
+    <div class="container">
+      <h3>Creative Dojo – RPG Maker Dev Suite</h3>
+      <p>
+        A set of in browser tools for building game content including maps,
+        story scenes, items, and systems. Designed like a custom CMS for RPG
+        worlds.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Map Editor</h4>
+          <p>Create and edit game areas, layouts, and navigation.</p>
+        </div>
+        <div class="card">
+          <h4>Story Editor</h4>
+          <p>Write scenes, dialogue, and branching narrative events.</p>
+        </div>
+        <div class="card">
+          <h4>Item & Data Index</h4>
+          <p>Manage items, characters, and game data in structured form.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="vfa" class="section alt">
+    <div class="container">
+      <h3>Veldara: Forgotten Archives</h3>
+      <p>
+        A playable RPG experience built using the Creative Dojo toolset. This
+        project demonstrates how my editor systems translate into an actual
+        game.
+      </p>
+      <a href="#" class="btn primary">Launch Demo</a>
+    </div>
+  </section>
+
+  <section id="projects" class="section">
+    <div class="container">
+      <h3>Other Projects</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Tarot App</h4>
+          <p>A card reading app driven by structured content and expandable decks.</p>
+        </div>
+        <div class="card">
+          <h4>List App</h4>
+          <p>A productivity focused list manager with strong UX fundamentals.</p>
+        </div>
+        <div class="card">
+          <h4>Journal App</h4>
+          <p>A writing and reflection tool exploring persistent state and UI flow.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section alt">
+    <div class="container">
+      <h3>About Me</h3>
+      <p>
+        I am a front end developer focused on interactive tools, creative
+        systems, and user friendly interfaces. I enjoy building applications
+        that combine structure, storytelling, and visual design.
+      </p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 Orlando Aviles – Creative Dojo</p>
+    </div>
+  </footer>
+</body>
+</html>
