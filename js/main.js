@@ -18,25 +18,31 @@ loadComponent("site-footer", "components/footer.html");
 
 const projects = [
   {
-    title: "Tarot App",
-    description: "A dynamic tarot reading application powered by structured card data and expandable decks. Built to explore state management, reusable UI components, and interactive storytelling through divination systems.",
+    title: "Tarot Dealer",
+    description: "A dynamic tarot reading application powered by structured card data and expandable decks. Built to explore state management, reusable UI components, and interactive storytelling through divination systems. Draw cards, explore symbolism, and reflect on life’s patterns.",
     url: "apps/Tarot/index.html",
     tag: "Creative Tool"
   },
   {
-    title: "List App",
-    description: "A productivity-focused list manager designed with clean UX principles, intuitive task flows, and persistent state handling.",
+    title: "ListKeeper",
+    description: "A productivity-focused list manager designed with clean UX principles, intuitive task flows, and persistent state handling. Organize your tasks, track goals, and keep your daily quests in order.",
     url: "apps/List.html",
     tag: "Productivity Tool"
   },
   {
-    title: "Journal App",
+    title: "RecordKeeper Scribe",
     description: "A digital journaling tool centered on reflection and long-form writing, featuring smooth input flows and calm, distraction-free design.",
     url: "apps/Journal.html",
     tag: "Writing Tool"
   },
   {
-    title: "Blackjack",
+    title:"LoopSmith Beatpad",
+    description: "Forge rhythms, layer melodies, and shape sound in a hands on beat crafting studio. Build loops, arrange patterns, and experiment with tempo and texture as your tracks come to life one hit at a time.",
+    url: "apps/Beatpad.html",
+    tag: "Audio Tool"
+  },
+  {
+    title: "Blackjack Dealer",
     description: "A fully interactive Blackjack game built in vanilla JavaScript featuring real card logic and smooth UI feedback.",
     url: "apps/Blackjack.html",
     tag: "Game"
