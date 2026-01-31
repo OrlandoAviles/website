@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Creative Dojo – Dev Suite</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Creative Dojo</div>
+  <div class="tabs">
+    <div class="tab active" data-mode="world">World</div>
+    <div class="tab" data-mode="story">Story</div>
+    <div class="tab" data-mode="player">Player</div>
+    <div class="tab" data-mode="combat">Combat</div>
+    <div class="tab" data-mode="audio">Audio</div>
+    <div class="tab" data-mode="vfx">VFX</div>
+    <div class="tab" data-mode="sprites">Sprites</div>
+    <div class="tab" data-mode="data">Data</div>
+  </div>
+  <div class="top-actions">
+    <button class="save-btn" onclick="saveProject()">💾 Save</button>
+    <button class="load-btn" onclick="document.getElementById('fileLoader').click()">📂 Load</button>
+    <input type="file" id="fileLoader" accept=".json" style="display:none" />
+  </div>
+</div>
+
+<div class="workspace">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="canvas-area" id="canvasArea"></div>
+  <div class="inspector" id="inspector"></div>
+  <div class="bottombar" id="bottombar"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
