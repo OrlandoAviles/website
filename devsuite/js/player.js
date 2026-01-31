@@ -1,4 +1,4 @@
-export function mount({ sidebar, inspector, projectData, updateBottomBar }) {
+export function mount({ sidebar, inspector, projectData, updateBottomBar, notifyDataChanged }) {
   sidebar.innerHTML = `<h3>Player</h3><p>Edit core character stats.</p>`;
 
   const p = projectData.player;
@@ -6,6 +6,7 @@ export function mount({ sidebar, inspector, projectData, updateBottomBar }) {
   inspector.innerHTML = `
     <h3>Player Properties</h3>
     <div class="field"><label>Name</label><input id="pName" value="${p.name}"></div>
+
     <h3>Base Stats</h3>
     <div class="field"><label>HP</label><input type="number" id="pHP" value="${p.stats.hp}"></div>
     <div class="field"><label>MP</label><input type="number" id="pMP" value="${p.stats.mp}"></div>
@@ -17,30 +18,36 @@ export function mount({ sidebar, inspector, projectData, updateBottomBar }) {
   pName.oninput = e => {
     p.name = e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 
   pHP.oninput = e => {
     p.stats.hp = +e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 
   pMP.oninput = e => {
     p.stats.mp = +e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 
   pATK.oninput = e => {
     p.stats.atk = +e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 
   pDEF.oninput = e => {
     p.stats.def = +e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 
   pSPD.oninput = e => {
     p.stats.spd = +e.target.value;
     updateBottomBar();
+    notifyDataChanged();
   };
 }

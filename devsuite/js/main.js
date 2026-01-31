@@ -26,6 +26,26 @@ export const projectData = {
 };
 
 /* =========================
+   GLOBAL UI UPDATE
+========================= */
+export function updateBottomBar() {
+  const s = projectData.player.stats;
+  bottombar.textContent =
+    `Mode: ${currentMode.toUpperCase()} | ` +
+    `HP ${s.hp}  MP ${s.mp}  ATK ${s.atk}  DEF ${s.def}  SPD ${s.spd}`;
+}
+
+/* Called whenever shared data changes */
+export function notifyDataChanged() {
+  updateBottomBar();
+
+  // If combat tool is open, refresh preview
+  if (currentMode === "combat" && window.updateCombatPreviewGlobal) {
+    window.updateCombatPreviewGlobal();
+  }
+}
+
+/* =========================
    TOOL REGISTRY
 ========================= */
 const tools = {
@@ -35,16 +55,6 @@ const tools = {
   audio: mountAudio,
   player: mountPlayer
 };
-
-/* =========================
-   GLOBAL UI UPDATE
-========================= */
-export function updateBottomBar() {
-  const s = projectData.player.stats;
-  bottombar.textContent =
-    `Mode: ${currentMode.toUpperCase()} | ` +
-    `HP ${s.hp}  MP ${s.mp}  ATK ${s.atk}  DEF ${s.def}  SPD ${s.spd}`;
-}
 
 /* =========================
    MODE SWITCHING
@@ -63,7 +73,8 @@ function switchMode(mode) {
       canvasArea,
       bottombar,
       projectData,
-      updateBottomBar
+      updateBottomBar,
+      notifyDataChanged   // 🔥 now passed correctly
     });
   }
 
