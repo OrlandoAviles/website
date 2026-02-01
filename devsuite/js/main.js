@@ -19,7 +19,10 @@ let currentMode = "world";
 export const projectData = {
   player: {
     name: "Hero",
-    stats: { hp: 100, mp: 30, atk: 10, def: 8, spd: 6 }
+    spriteId: null,
+    stats: { hp: 100, mp: 30, atk: 10, def: 8, spd: 6 },
+    position: { x: 5, y: 5 }, // grid position in world
+
   },
   world: { nextId: 1, areas: [] },
   story: { nextId: 1, scenes: [] },

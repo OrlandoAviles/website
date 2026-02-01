@@ -7,6 +7,9 @@ export function mount({ sidebar, inspector, projectData, updateBottomBar, notify
     <h3>Player Properties</h3>
     <div class="field"><label>Name</label><input id="pName" value="${p.name}"></div>
 
+    <h3>Appearance</h3>
+    <div class="field"><label>Sprite</label><select id="pSprite"></select></div>
+
     <h3>Base Stats</h3>
     <div class="field"><label>HP</label><input type="number" id="pHP" value="${p.stats.hp}"></div>
     <div class="field"><label>MP</label><input type="number" id="pMP" value="${p.stats.mp}"></div>
@@ -14,6 +17,26 @@ export function mount({ sidebar, inspector, projectData, updateBottomBar, notify
     <div class="field"><label>DEF</label><input type="number" id="pDEF" value="${p.stats.def}"></div>
     <div class="field"><label>SPD</label><input type="number" id="pSPD" value="${p.stats.spd}"></div>
   `;
+
+  const spriteSelect = document.getElementById("pSprite");
+
+  function refreshSpriteOptions() {
+    spriteSelect.innerHTML = `<option value="">None</option>`;
+    projectData.sprites.list.forEach(sprite => {
+      const opt = document.createElement("option");
+      opt.value = sprite.id;
+      opt.textContent = sprite.name;
+      if (projectData.player.spriteId === sprite.id) opt.selected = true;
+      spriteSelect.appendChild(opt);
+    });
+  }
+
+  refreshSpriteOptions();
+
+  spriteSelect.onchange = e => {
+    projectData.player.spriteId = e.target.value ? Number(e.target.value) : null;
+  };
+
 
   pName.oninput = e => {
     p.name = e.target.value;
