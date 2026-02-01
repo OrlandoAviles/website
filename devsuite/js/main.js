@@ -3,6 +3,7 @@ import { mount as mountStory } from "./story.js";
 import { mount as mountCombat } from "./combat.js";
 import { mount as mountAudio } from "./audio/tool.js";
 import { mount as mountPlayer } from "./player.js";
+import { mount as mountSprite } from "./sprite.js";
 
 const sidebar = document.getElementById("sidebar");
 const inspector = document.getElementById("inspector");
@@ -22,7 +23,9 @@ export const projectData = {
   },
   world: { nextId: 1, areas: [] },
   story: { nextId: 1, scenes: [] },
-  combat: { nextEnemyId: 1, enemies: [] }
+  combat: { nextEnemyId: 1, enemies: [] },
+  sprites: { nextId: 1, list: [] },
+
 };
 
 /* =========================
@@ -53,7 +56,8 @@ const tools = {
   story: mountStory,
   combat: mountCombat,
   audio: mountAudio,
-  player: mountPlayer
+  player: mountPlayer,
+  sprite: mountSprite
 };
 
 /* =========================
