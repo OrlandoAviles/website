@@ -66,22 +66,30 @@ const tools = {
 /* =========================
    MODE SWITCHING
 ========================= */
+let currentTool = null;
+
 function switchMode(mode) {
   currentMode = mode;
+
+  // 🧹 Unmount previous tool if it exists
+  if (currentTool && typeof currentTool.unmount === "function") {
+    currentTool.unmount();
+  }
+
   sidebar.innerHTML = "";
   inspector.innerHTML = "";
   canvasArea.innerHTML = "";
 
   const mountTool = tools[mode];
   if (mountTool) {
-    mountTool({
+    currentTool = mountTool({
       sidebar,
       inspector,
       canvasArea,
       bottombar,
       projectData,
       updateBottomBar,
-      notifyDataChanged   // 🔥 now passed correctly
+      notifyDataChanged
     });
   }
 
