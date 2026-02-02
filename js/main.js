@@ -18,19 +18,19 @@ loadComponent("site-footer", "components/footer.html");
 
 const projects = [
   {
-    title: "Tarot Dealer",
-    description: "A dynamic tarot reading application powered by structured card data and expandable decks. Built to explore state management, reusable UI components, and interactive storytelling through divination systems. Draw cards, explore symbolism, and reflect on life’s patterns.",
-    url: "apps/Tarot/index.html",
-    tag: "Creative Tool"
+    title: "Page Crafter",
+    description: "Interactive layout generator that builds full landing pages from modular sections, dynamic themes, and typography presets, with downloadable HTML output.",
+    url: "apps/PageCrafter.html",
+    tag: "Web Design Tool"
   },
   {
-    title: "ListKeeper",
+    title: "List Keeper",
     description: "A productivity-focused list manager designed with clean UX principles, intuitive task flows, and persistent state handling. Organize your tasks, track goals, and keep your daily quests in order.",
     url: "apps/List.html",
     tag: "Productivity Tool"
   },
   {
-    title: "RecordKeeper Scribe",
+    title: "Record Keeper",
     description: "A digital journaling tool centered on reflection and long-form writing, featuring smooth input flows and calm, distraction-free design.",
     url: "apps/Journal.html",
     tag: "Writing Tool"
@@ -40,6 +40,12 @@ const projects = [
     description: "Forge rhythms, layer melodies, and shape sound in a hands on beat crafting studio. Build loops, arrange patterns, and experiment with tempo and texture as your tracks come to life one hit at a time.",
     url: "apps/Beatpad.html",
     tag: "Audio Tool"
+  },
+  {
+    title: "Tarot Dealer",
+    description: "A dynamic tarot reading application powered by structured card data and expandable decks. Built to explore state management, reusable UI components, and interactive storytelling through divination systems.",
+    url: "apps/Tarot/index.html",
+    tag: "Creative Tool"
   },
   {
     title: "Blackjack Dealer",
