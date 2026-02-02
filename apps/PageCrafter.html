@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PageCrafter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600&family=Montserrat:wght@600&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #f5f7fa;
+      --color-primary: #2563eb;
+      --color-secondary: #9333ea;
+      --color-text: #1f2937;
+      --color-mutedText: #6b7280;
+      --font-heading: 'Poppins', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --radius: 12px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      --space-multiplier: 1;
+      --max-width: 1100px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 100vh;
+    }
+
+    aside {
+      background: var(--color-surface);
+      padding: 2rem;
+      border-right: 1px solid rgba(0,0,0,0.05);
+      overflow-y: auto;
+    }
+
+    h1, h2, h3 {
+      font-family: var(--font-heading);
+      margin: 0 0 0.5rem;
+      line-height: 1.2;
+    }
+
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.1rem; margin-top: 2rem; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      margin-bottom: 0.4rem;
+      color: var(--color-mutedText);
+    }
+
+    select, button, textarea {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(0,0,0,0.08);
+      font-family: var(--font-body);
+    }
+
+    textarea {
+      min-height: 160px;
+      font-size: 0.75rem;
+      resize: vertical;
+      white-space: pre;
+    }
+
+    button {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-2px); }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--color-text);
+      margin-bottom: 0.4rem;
+    }
+
+    main { overflow-y: auto; }
+
+    nav {
+      padding: 1rem 2rem;
+      background: var(--color-surface);
+      box-shadow: var(--shadow);
+    }
+
+    .nav-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      color: var(--color-text);
+      text-decoration: none;
+      opacity: 0.9;
+    }
+
+    .nav-links a:hover { opacity: 1; }
+
+    section {
+      padding: calc(3rem * var(--space-multiplier)) calc(2rem * var(--space-multiplier));
+    }
+
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+
+    p { color: var(--color-mutedText); }
+
+    .btn-primary, .btn-secondary {
+      border-radius: var(--radius);
+      padding: 0.6rem 1rem;
+      box-shadow: var(--shadow);
+      border: none;
+      color: white;
+    }
+
+    .btn-primary { background: var(--color-primary); }
+    .btn-secondary { background: var(--color-secondary); }
+
+    .card {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: calc(2rem * var(--space-multiplier));
+      box-shadow: var(--shadow);
+    }
+
+    .grid-3 {
+      display: grid;
+      gap: calc(2rem * var(--space-multiplier));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: calc(3rem * var(--space-multiplier));
+      flex-wrap: wrap;
+    }
+
+    .hero-centered {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .preview-fade { animation: fadeIn 0.35s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <h1>PageCrafter</h1>
+
+    <h2>Theme</h2>
+    <label>Color & Style</label>
+    <select id="themeSelect"></select>
+
+    <h2>Typography</h2>
+    <label>Font Pairing</label>
+    <select id="fontSelect"></select>
+
+    <h2>Layout Personality</h2>
+    <label>Corner Style</label>
+    <select id="radiusSelect"></select>
+
+    <label>Spacing Density</label>
+    <select id="spacingSelect"></select>
+
+    <h2>Sections</h2>
+    <div class="checkbox-group" id="sectionToggles"></div>
+
+    <h2>Layout Order</h2>
+    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;">
+      <input type="checkbox" id="shuffleToggle" checked /> Shuffle section order
+    </label>
+
+    <button id="regenBtn">Regenerate Layout</button>
+
+    <h2>Export</h2>
+    <button id="exportBtn">Copy Full HTML</button>
+    <button id="downloadBtn">Download .html File</button>
+    <textarea id="exportOutput" placeholder="Full HTML document will appear here..."></textarea>
+  </aside>
+
+  <main>
+    <div id="preview" class="preview-fade"></div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const themes = {
+      lightModern: {
+        name: 'Light Modern',
+        colors: { bg: '#ffffff', surface: '#f5f7fa', primary: '#2563eb', secondary: '#9333ea', text: '#1f2937', mutedText: '#6b7280' },
+        shadow: '0 10px 30px rgba(0,0,0,0.08)'
+      },
+      darkBold: {
+        name: 'Dark Bold',
+        colors: { bg: '#0f172a', surface: '#1e293b', primary: '#f43f5e', secondary: '#22d3ee', text: '#f8fafc', mutedText: '#94a3b8' },
+        shadow: '0 10px 25px rgba(0,0,0,0.4)'
+      }
+    };
+
+    const fonts = {
+      modern: { heading: "'Poppins', sans-serif", body: "'Inter', sans-serif" },
+      elegant: { heading: "'Montserrat', sans-serif", body: "'Open Sans', sans-serif" }
+    };
+
+    const radiusOptions = { soft: '16px', rounded: '12px', sharp: '4px' };
+    const spacingOptions = { compact: 0.7, cozy: 1, spacious: 1.4 };
+
+    const activeSections = { navbar: true, hero: true, features: true, cta: true };
+
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      Object.entries(theme.colors).forEach(([k, v]) => root.style.setProperty(`--color-${k}`, v));
+      root.style.setProperty('--shadow', theme.shadow);
+    }
+
+    function applyFonts(fontSet) {
+      const root = document.documentElement;
+      root.style.setProperty('--font-heading', fontSet.heading);
+      root.style.setProperty('--font-body', fontSet.body);
+    }
+
+    function applyRadius(val) { document.documentElement.style.setProperty('--radius', val); }
+    function applySpacing(mult) { document.documentElement.style.setProperty('--space-multiplier', String(mult)); }
+
+    const sections = {
+      navbar: [
+        () => (
+          `<nav>
+            <div class="nav-inner">
+              <strong>Brand</strong>
+              <div class="nav-links">
+                <a href="#">Home</a>
+                <a href="#">Features</a>
+                <a href="#">Pricing</a>
+                <a href="#">Contact</a>
+              </div>
+            </div>
+          </nav>`
+        )
+      ],
+      hero: [
+        () => (
+          `<section>
+            <div class="container hero">
+              <div>
+                <h1>Build beautiful pages fast</h1>
+                <p>Generate layouts instantly with smart design settings.</p>
+                <button class="btn-primary">Get Started</button>
+              </div>
+              <div class="card">Visual Block</div>
+            </div>
+          </section>`
+        ),
+        () => (
+          `<section>
+            <div class="container hero-centered">
+              <h1>Design systems made simple</h1>
+              <p>Create full layouts in seconds.</p>
+              <button class="btn-primary">Try It Now</button>
+            </div>
+          </section>`
+        )
+      ],
+      features: [
+        () => (
+          `<section>
+            <div class="container grid-3">
+              ${[1, 2, 3].map(i => (
+                `<div class="card">
+                  <h3>Feature ${i}</h3>
+                  <p>Short description of this benefit.</p>
+                </div>`
+              )).join('')}
+            </div>
+          </section>`
+        )
+      ],
+      cta: [
+        () => (
+          `<section>
+            <div class="container hero-centered">
+              <h2>Ready to build your next page?</h2>
+              <button class="btn-secondary">Start Crafting</button>
+            </div>
+          </section>`
+        )
+      ]
+    };
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getActiveOrder() {
+      let order = Object.keys(activeSections).filter(k => activeSections[k]);
+      const shuffle = document.getElementById('shuffleToggle').checked;
+      if (shuffle) order = shuffleArray(order);
+      return order;
+    }
+
+    function generateLayoutHTML() {
+      return getActiveOrder()
+        .map(type => sections[type][Math.floor(Math.random() * sections[type].length)]())
+        .join('');
+    }
+
+    function renderPage() {
+      const preview = document.getElementById('preview');
+      preview.classList.remove('preview-fade');
+      void preview.offsetWidth;
+      preview.classList.add('preview-fade');
+      preview.innerHTML = generateLayoutHTML();
+    }
+
+    function buildFullHTMLDocument(innerHTML) {
+      const s = getComputedStyle(document.documentElement);
+
+      const cssVars = `:root {
+  --color-bg: ${s.getPropertyValue('--color-bg').trim()};
+  --color-surface: ${s.getPropertyValue('--color-surface').trim()};
+  --color-primary: ${s.getPropertyValue('--color-primary').trim()};
+  --color-secondary: ${s.getPropertyValue('--color-secondary').trim()};
+  --color-text: ${s.getPropertyValue('--color-text').trim()};
+  --color-mutedText: ${s.getPropertyValue('--color-mutedText').trim()};
+  --font-heading: ${s.getPropertyValue('--font-heading').trim()};
+  --font-body: ${s.getPropertyValue('--font-body').trim()};
+  --radius: ${s.getPropertyValue('--radius').trim()};
+  --shadow: ${s.getPropertyValue('--shadow').trim()};
+}`;
+
+      // Keep exported CSS intentionally minimal but complete.
+      const baseCSS = `
+body{margin:0;font-family:var(--font-body);background:var(--color-bg);color:var(--color-text);line-height:1.6;}
+nav{padding:1rem 2rem;background:var(--color-surface);box-shadow:var(--shadow);}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:1rem;}
+.nav-links{display:flex;gap:1.5rem;font-size:0.9rem;flex-wrap:wrap;}
+.nav-links a{color:var(--color-text);text-decoration:none;opacity:0.9;}
+.nav-links a:hover{opacity:1;}
+section{padding:3rem 2rem;}
+.container{max-width:1100px;margin:0 auto;}
+.btn-primary{background:var(--color-primary);color:white;border:none;border-radius:var(--radius);padding:0.6rem 1rem;}
+.btn-secondary{background:var(--color-secondary);color:white;border:none;border-radius:var(--radius);padding:0.6rem 1rem;}
+.card{background:var(--color-surface);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow);}
+.grid-3{display:grid;gap:2rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+.hero{display:flex;align-items:center;gap:3rem;flex-wrap:wrap;}
+.hero-centered{text-align:center;max-width:700px;margin:0 auto;}
+`;
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generated by PageCrafter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600&family=Montserrat:wght@600&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+${cssVars}
+${baseCSS}
+  </style>
+</head>
+<body>
+${innerHTML}
+<\/body>
+<\/html>`;
+    }
+
+    function exportHTML() {
+      const htmlDoc = buildFullHTMLDocument(document.getElementById('preview').innerHTML);
+      const out = document.getElementById('exportOutput');
+      out.value = htmlDoc;
+      out.focus();
+      out.select();
+      // Best-effort copy; still fine if browser blocks it.
+      try { document.execCommand('copy'); } catch (_) {}
+    }
+
+    function downloadHTML() {
+      const htmlDoc = buildFullHTMLDocument(document.getElementById('preview').innerHTML);
+      const blob = new Blob([htmlDoc], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pagecrafter-layout.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // UI wiring
+    const themeSelect = document.getElementById('themeSelect');
+    const fontSelect = document.getElementById('fontSelect');
+    const radiusSelect = document.getElementById('radiusSelect');
+    const spacingSelect = document.getElementById('spacingSelect');
+    const sectionToggles = document.getElementById('sectionToggles');
+
+    Object.entries(themes).forEach(([k, v]) => themeSelect.add(new Option(v.name, k)));
+    Object.entries(fonts).forEach(([k]) => fontSelect.add(new Option(k, k)));
+    Object.entries(radiusOptions).forEach(([k]) => radiusSelect.add(new Option(k, k)));
+    Object.entries(spacingOptions).forEach(([k]) => spacingSelect.add(new Option(k, k)));
+
+    Object.keys(activeSections).forEach(section => {
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true;
+      cb.addEventListener('change', () => {
+        activeSections[section] = cb.checked;
+        renderPage();
+      });
+      label.appendChild(cb);
+      label.append(` ${section.charAt(0).toUpperCase() + section.slice(1)}`);
+      sectionToggles.appendChild(label);
+    });
+
+    themeSelect.addEventListener('change', e => applyTheme(themes[e.target.value]));
+    fontSelect.addEventListener('change', e => applyFonts(fonts[e.target.value]));
+    radiusSelect.addEventListener('change', e => applyRadius(radiusOptions[e.target.value]));
+    spacingSelect.addEventListener('change', e => applySpacing(spacingOptions[e.target.value]));
+
+    document.getElementById('regenBtn').addEventListener('click', renderPage);
+    document.getElementById('exportBtn').addEventListener('click', exportHTML);
+    document.getElementById('downloadBtn').addEventListener('click', downloadHTML);
+
+    // Boot
+    applyTheme(themes.lightModern);
+    applyFonts(fonts.modern);
+    applyRadius(radiusOptions.rounded);
+    applySpacing(spacingOptions.cozy);
+    renderPage();
+  </script>
+</body>
+</html>
