@@ -4,6 +4,7 @@ import { mount as mountCombat } from "./combat.js";
 import { mount as mountAudio } from "./audio/tool.js";
 import { mount as mountPlayer } from "./player.js";
 import { mount as mountSprite } from "./sprite.js";
+import { mount as mountVfx } from "./vfx/tool.js";
 
 const sidebar = document.getElementById("sidebar");
 const inspector = document.getElementById("inspector");
@@ -60,7 +61,8 @@ const tools = {
   combat: mountCombat,
   audio: mountAudio,
   player: mountPlayer,
-  sprite: mountSprite
+  sprite: mountSprite,
+  vfx: mountVfx
 };
 
 /* =========================
