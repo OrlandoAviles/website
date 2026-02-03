@@ -102,14 +102,22 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
 
   function slider(label, key, min, max, step = 1, colorPreview = false) {
     const wrap = document.createElement("div");
+    wrap.style.display = "flex";
+    wrap.style.flexDirection = "column";
+    wrap.style.gap = "4px";
+
     const l = document.createElement("label");
     l.textContent = label;
+    l.style.fontSize = "12px";
+    l.style.opacity = "0.8";
+
     const input = document.createElement("input");
     input.type = "range";
     input.min = min;
     input.max = max;
     input.step = step;
     input.value = workingPreset[key];
+    input.style.width = "100%";
 
     input.oninput = () => {
       workingPreset[key] = Number(input.value);
@@ -124,7 +132,7 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
       const bar = document.createElement("div");
       bar.style.height = "8px";
       bar.style.borderRadius = "4px";
-      bar.style.margin = "4px 0 8px";
+      bar.style.width = "100%";
       bar.className = `colorbar-${key}`;
       wrap.appendChild(bar);
     }
@@ -132,11 +140,43 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
     inspector.appendChild(wrap);
   }
 
+  function hsvToRgb(h, s, v) {
+    s /= 100; v /= 100;
+    const c = v * s;
+    const hh = (h % 360) / 60;
+    const x = c * (1 - Math.abs((hh % 2) - 1));
+    let r=0,g=0,b=0;
+    if (hh>=0&&hh<1)[r,g,b]=[c,x,0];
+    else if (hh<2)[r,g,b]=[x,c,0];
+    else if (hh<3)[r,g,b]=[0,c,x];
+    else if (hh<4)[r,g,b]=[0,x,c];
+    else if (hh<5)[r,g,b]=[x,0,c];
+    else [r,g,b]=[c,0,x];
+    const m=v-c;
+    return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
+  }
+
   function updateColorBars() {
-    const hueBarA = inspector.querySelector('.colorbar-hueA');
-    const hueBarB = inspector.querySelector('.colorbar-hueB');
-    if (hueBarA) hueBarA.style.background = "linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)";
-    if (hueBarB) hueBarB.style.background = "linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)";
+    const hueA = workingPreset.hueA;
+    const hueB = workingPreset.hueB;
+    const hueMid = (hueA + hueB) / 2;
+
+    const hueGrad = "linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)";
+
+    const satGrad = `linear-gradient(90deg, ${hsvToRgb(hueMid,0,100)}, ${hsvToRgb(hueMid,100,100)})`;
+    const valGrad = `linear-gradient(90deg, ${hsvToRgb(hueMid,100,0)}, ${hsvToRgb(hueMid,100,100)})`;
+
+    const setBar = (cls, bg) => {
+      const el = inspector.querySelector(cls);
+      if (el) el.style.background = bg;
+    };
+
+    setBar('.colorbar-hueA', hueGrad);
+    setBar('.colorbar-hueB', hueGrad);
+    setBar('.colorbar-satMin', satGrad);
+    setBar('.colorbar-satMax', satGrad);
+    setBar('.colorbar-valMin', valGrad);
+    setBar('.colorbar-valMax', valGrad);
   }
 
   function buildInspector() {
@@ -145,10 +185,10 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
     // --- COLOR ---
     slider("Hue A", "hueA", 0, 360, 1, true);
     slider("Hue B", "hueB", 0, 360, 1, true);
-    slider("Sat Min", "satMin", 0, 100);
-    slider("Sat Max", "satMax", 0, 100);
-    slider("Val Min", "valMin", 0, 100);
-    slider("Val Max", "valMax", 0, 100);
+    slider("Sat Min", "satMin", 0, 100, 1, true);
+    slider("Sat Max", "satMax", 0, 100, 1, true);
+    slider("Val Min", "valMin", 0, 100, 1, true);
+    slider("Val Max", "valMax", 0, 100, 1, true);
 
     // --- MOTION ---
     slider("Speed Min", "speedMin", 0, 800, 1);
