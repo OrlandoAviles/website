@@ -100,7 +100,7 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
   /* Inspector Controls */
   /* ------------------ */
 
-  function slider(label, key, min, max, step = 1) {
+  function slider(label, key, min, max, step = 1, colorPreview = false) {
     const wrap = document.createElement("div");
     const l = document.createElement("label");
     l.textContent = label;
@@ -114,21 +114,64 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
     input.oninput = () => {
       workingPreset[key] = Number(input.value);
       applyPresetToEngine();
+      if (colorPreview) updateColorBars();
     };
 
     wrap.appendChild(l);
     wrap.appendChild(input);
+
+    if (colorPreview) {
+      const bar = document.createElement("div");
+      bar.style.height = "8px";
+      bar.style.borderRadius = "4px";
+      bar.style.margin = "4px 0 8px";
+      bar.className = `colorbar-${key}`;
+      wrap.appendChild(bar);
+    }
+
     inspector.appendChild(wrap);
+  }
+
+  function updateColorBars() {
+    const hueBarA = inspector.querySelector('.colorbar-hueA');
+    const hueBarB = inspector.querySelector('.colorbar-hueB');
+    if (hueBarA) hueBarA.style.background = "linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)";
+    if (hueBarB) hueBarB.style.background = "linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)";
   }
 
   function buildInspector() {
     inspector.innerHTML = "";
-    slider("Hue A", "hueA", 0, 360);
-    slider("Hue B", "hueB", 0, 360);
-    slider("Size Min", "sizeMin", 1, 20, 0.1);
-    slider("Size Max", "sizeMax", 1, 40, 0.1);
-    slider("Life Min", "lifeMin", 0.1, 3, 0.05);
-    slider("Life Max", "lifeMax", 0.1, 5, 0.05);
+
+    // --- COLOR ---
+    slider("Hue A", "hueA", 0, 360, 1, true);
+    slider("Hue B", "hueB", 0, 360, 1, true);
+    slider("Sat Min", "satMin", 0, 100);
+    slider("Sat Max", "satMax", 0, 100);
+    slider("Val Min", "valMin", 0, 100);
+    slider("Val Max", "valMax", 0, 100);
+
+    // --- MOTION ---
+    slider("Speed Min", "speedMin", 0, 800, 1);
+    slider("Speed Max", "speedMax", 0, 900, 1);
+    slider("Spread A", "spreadA", -180, 180, 1);
+    slider("Spread B", "spreadB", -180, 180, 1);
+    slider("Drag Min", "dragMin", 0, 5, 0.05);
+    slider("Drag Max", "dragMax", 0, 5, 0.05);
+    slider("Gravity Scale", "gravityScale", -2, 2, 0.05);
+
+    // --- SIZE & LIFE ---
+    slider("Size Min", "sizeMin", 0.5, 30, 0.1);
+    slider("Size Max", "sizeMax", 0.5, 50, 0.1);
+    slider("Size Decay Min", "sizeDecayMin", 0, 20, 0.1);
+    slider("Size Decay Max", "sizeDecayMax", 0, 30, 0.1);
+    slider("Life Min", "lifeMin", 0.05, 4, 0.05);
+    slider("Life Max", "lifeMax", 0.05, 6, 0.05);
+    slider("Fade", "fade", 0.05, 3, 0.05);
+
+    // --- DENSITY ---
+    slider("Density Mult", "mult", 0.05, 2, 0.01);
+
+    updateColorBars();
   }
   buildInspector();
 
@@ -136,11 +179,48 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
   /* Canvas Interaction */
   /* ------------------ */
 
-  canvas.addEventListener("pointerdown", e => {
+  let painting = false;
+  let lastX = 0;
+  let lastY = 0;
+  const brushSpacing = 12;
+
+  function emitAtEvent(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     engine.emit(x, y, 60);
+    lastX = x;
+    lastY = y;
+  }
+
+  canvas.addEventListener("pointerdown", e => {
+    painting = true;
+    emitAtEvent(e);
+  });
+
+  canvas.addEventListener("pointermove", e => {
+    if (!painting) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const dx = x - lastX;
+    const dy = y - lastY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist >= brushSpacing) {
+      const steps = Math.floor(dist / brushSpacing);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        engine.emit(lastX + dx * t, lastY + dy * t, 60);
+      }
+      lastX = x;
+      lastY = y;
+    }
+  });
+
+  window.addEventListener("pointerup", () => {
+    painting = false;
   });
 
   return {
