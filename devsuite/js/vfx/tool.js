@@ -182,6 +182,35 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
   function buildInspector() {
     inspector.innerHTML = "";
 
+    // --- SHAPE ---
+    const shapeWrap = document.createElement("div");
+    shapeWrap.style.display = "flex";
+    shapeWrap.style.flexDirection = "column";
+    shapeWrap.style.gap = "4px";
+
+    const shapeLabel = document.createElement("label");
+    shapeLabel.textContent = "Shape";
+    shapeLabel.style.fontSize = "12px";
+    shapeLabel.style.opacity = "0.8";
+
+    const shapeSelect = document.createElement("select");
+    ["circle", "square", "star", "plus"].forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      if (workingPreset.shape === s) opt.selected = true;
+      shapeSelect.appendChild(opt);
+    });
+
+    shapeSelect.onchange = () => {
+      workingPreset.shape = shapeSelect.value;
+      applyPresetToEngine();
+    };
+
+    shapeWrap.appendChild(shapeLabel);
+    shapeWrap.appendChild(shapeSelect);
+    inspector.appendChild(shapeWrap);
+
     // --- COLOR ---
     slider("Hue A", "hueA", 0, 360, 1, true);
     slider("Hue B", "hueB", 0, 360, 1, true);
@@ -189,6 +218,26 @@ export function mount({ sidebar, inspector, canvasArea, projectData, notifyDataC
     slider("Sat Max", "satMax", 0, 100, 1, true);
     slider("Val Min", "valMin", 0, 100, 1, true);
     slider("Val Max", "valMax", 0, 100, 1, true);
+
+    const hueAnimWrap = document.createElement("label");
+    hueAnimWrap.style.display = "flex";
+    hueAnimWrap.style.alignItems = "center";
+    hueAnimWrap.style.gap = "6px";
+    hueAnimWrap.style.fontSize = "12px";
+    hueAnimWrap.style.opacity = "0.85";
+
+    const hueAnimCheck = document.createElement("input");
+    hueAnimCheck.type = "checkbox";
+    hueAnimCheck.checked = !!workingPreset.hueAnim;
+
+    hueAnimCheck.onchange = () => {
+      workingPreset.hueAnim = hueAnimCheck.checked;
+      applyPresetToEngine();
+    };
+
+    hueAnimWrap.appendChild(hueAnimCheck);
+    hueAnimWrap.appendChild(document.createTextNode("Animate Hue Over Life"));
+    inspector.appendChild(hueAnimWrap);
 
     // --- MOTION ---
     slider("Speed Min", "speedMin", 0, 800, 1);
