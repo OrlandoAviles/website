@@ -44,6 +44,7 @@
       gap: var(--gap);
       border-bottom: 1px solid rgba(255,255,255,.08);
       background: rgba(0,0,0,.12);
+      flex-wrap: wrap;
     }
     header h1 {
       margin: 0;
@@ -207,6 +208,20 @@
       background: rgba(0,0,0,.22);
       color: rgba(233,243,238,.85);
     }
+    .bet-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .bet-controls input {
+      width: 90px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
@@ -216,7 +231,8 @@
         <h1>Blackjack <span class="sub">Vanilla JS</span></h1>
       </div>
       <div class="topline">
-        <div class="pill">Shortcuts: <kbd>H</kbd> Hit • <kbd>S</kbd> Stand • <kbd>N</kbd> New Hand</div>
+        <div class="pill">Bankroll: <strong id="bankroll">500</strong> chips</div>
+        <div class="pill">Current Bet: <strong id="currentBet">0</strong></div>
         <div class="pill">Wins: <span id="wins">0</span> • Losses: <span id="losses">0</span> • Pushes: <span id="pushes">0</span></div>
       </div>
     </header>
@@ -245,25 +261,28 @@
       </section>
 
       <section class="controls">
+        <div class="bet-controls">
+          <label for="betInput">Bet:</label>
+          <input id="betInput" type="number" min="1" step="1" value="25" />
+          <button id="btnPlaceBet">Place Bet & Deal</button>
+        </div>
         <div class="buttons">
-          <button id="btnNew" class="primary">New Hand</button>
           <button id="btnHit">Hit</button>
           <button id="btnStand">Stand</button>
           <button id="btnReveal" class="danger">Reveal / Settle</button>
         </div>
         <div class="status" id="status">
-          Click <b>New Hand</b> to deal. Dealer hits to 17 (stands on soft 17).
+          Place a bet to start a hand.
         </div>
       </section>
     </main>
 
     <footer>
-      Rules: dealer draws to 17, aces auto-adjust. No splitting/doubling in this simple version.
+      Blackjack pays 3:2. Dealer draws to 17 and stands on soft 17.
     </footer>
   </div>
 
   <script>
-    // ---------- Blackjack (single file) ----------
     const SUITS = [
       { s: "♠", color: "black" },
       { s: "♥", color: "red" },
@@ -292,38 +311,35 @@
 
     function cardValue(rank) {
       if (rank === "A") return 11;
-      if (rank === "K" || rank === "Q" || rank === "J") return 10;
+      if (["K","Q","J"].includes(rank)) return 10;
       return Number(rank);
     }
 
     function handTotals(hand) {
-      // returns best total <= 21 if possible, else lowest total
       let total = 0;
       let aces = 0;
       for (const c of hand) {
         total += cardValue(c.rank);
         if (c.rank === "A") aces++;
       }
-      // downgrade aces from 11 to 1 as needed
       while (total > 21 && aces > 0) {
         total -= 10;
         aces--;
       }
-      // soft if any ace counted as 11
       const isSoft = hand.some(c => c.rank === "A") && total <= 21 && (hand.reduce((t,c)=>t+cardValue(c.rank),0) !== total);
       return { total, isSoft };
     }
 
-    // ---------- State ----------
-    let deck = [];
+    let deck = shuffle(makeDeck());
     let player = [];
     let dealer = [];
     let hiddenDealer = true;
     let roundOver = true;
+    let bankroll = 500;
+    let currentBet = 0;
 
     const stats = { wins: 0, losses: 0, pushes: 0 };
 
-    // ---------- DOM ----------
     const elDealerHand = document.getElementById("dealerHand");
     const elPlayerHand = document.getElementById("playerHand");
     const elDealerScore = document.getElementById("dealerScore");
@@ -331,39 +347,32 @@
     const elDealerHint = document.getElementById("dealerHint");
     const elPlayerHint = document.getElementById("playerHint");
     const elStatus = document.getElementById("status");
-
     const elWins = document.getElementById("wins");
     const elLosses = document.getElementById("losses");
     const elPushes = document.getElementById("pushes");
+    const elBankroll = document.getElementById("bankroll");
+    const elCurrentBet = document.getElementById("currentBet");
+    const betInput = document.getElementById("betInput");
 
-    const btnNew = document.getElementById("btnNew");
+    const btnPlaceBet = document.getElementById("btnPlaceBet");
     const btnHit = document.getElementById("btnHit");
     const btnStand = document.getElementById("btnStand");
     const btnReveal = document.getElementById("btnReveal");
 
-    function setStatus(html) {
-      elStatus.innerHTML = html;
+    function setStatus(html) { elStatus.innerHTML = html; }
+    function updateBankrollDisplay() {
+      elBankroll.textContent = bankroll;
+      elCurrentBet.textContent = currentBet;
     }
 
     function ensureDeck() {
-      // infinite shoe feel: reshuffle when low
-      if (deck.length < 15) {
-        deck = shuffle(makeDeck());
-      }
+      if (deck.length < 15) deck = shuffle(makeDeck());
     }
-
-    function draw() {
-      ensureDeck();
-      return deck.pop();
-    }
+    function draw() { ensureDeck(); return deck.pop(); }
 
     function renderCard(c, faceDown=false) {
       const div = document.createElement("div");
-      if (faceDown) {
-        div.className = "card back";
-        div.title = "Face down";
-        return div;
-      }
+      if (faceDown) { div.className = "card back"; return div; }
       div.className = `card ${c.color}`;
       const small = document.createElement("div");
       small.className = "small";
@@ -373,7 +382,6 @@
       big.textContent = c.suit;
       div.appendChild(small);
       div.appendChild(big);
-      div.title = `${c.rank}${c.suit}`;
       return div;
     }
 
@@ -385,27 +393,18 @@
         const faceDown = hiddenDealer && idx === 0;
         elDealerHand.appendChild(renderCard(c, faceDown));
       });
-
       player.forEach(c => elPlayerHand.appendChild(renderCard(c)));
 
-      // Scores
       const p = handTotals(player);
       elPlayerScore.textContent = p.total;
       elPlayerHint.textContent = p.isSoft ? " (soft)" : "";
 
       if (hiddenDealer) {
-        // show only upcard score (dealer[1])
-        if (dealer.length === 0) {
-          elDealerScore.textContent = "?";
-          elDealerHint.textContent = "";
-        } else if (dealer.length === 1) {
-          elDealerScore.textContent = "?";
-          elDealerHint.textContent = "";
-        } else {
+        if (dealer.length > 1) {
           const up = handTotals([dealer[1]]);
           elDealerScore.textContent = `${up.total} + ?`;
-          elDealerHint.textContent = "";
-        }
+        } else elDealerScore.textContent = "?";
+        elDealerHint.textContent = "";
       } else {
         const d = handTotals(dealer);
         elDealerScore.textContent = d.total;
@@ -417,28 +416,31 @@
       btnHit.disabled = roundOver;
       btnStand.disabled = roundOver;
       btnReveal.disabled = roundOver;
+      btnPlaceBet.disabled = !roundOver;
     }
 
-    function resetRound() {
+    function startRoundWithBet() {
+      const bet = Number(betInput.value);
+      if (bet <= 0 || bet > bankroll) {
+        setStatus("Invalid bet amount.");
+        return;
+      }
+      currentBet = bet;
+      bankroll -= bet;
+      updateBankrollDisplay();
+
       player = [];
       dealer = [];
       hiddenDealer = true;
       roundOver = false;
       setButtons();
-    }
 
-    function dealInitial() {
-      resetRound();
-      // two each: dealer first card hidden
       dealer.push(draw(), draw());
       player.push(draw(), draw());
-
       renderHands();
 
       const p = handTotals(player).total;
       const d = handTotals(dealer).total;
-
-      // Natural blackjack checks
       if (p === 21 || d === 21) {
         hiddenDealer = false;
         renderHands();
@@ -452,105 +454,60 @@
       if (roundOver) return;
       player.push(draw());
       renderHands();
-
       const p = handTotals(player).total;
-      if (p > 21) {
-        hiddenDealer = false;
-        renderHands();
-        settle();
-      } else if (p === 21) {
-        setStatus("You hit <b>21</b>. Dealer will play out.");
-        dealerPlayAndSettle();
-      } else {
-        setStatus("You drew a card. Still your move.");
-      }
+      if (p > 21) { hiddenDealer = false; renderHands(); settle(); }
     }
 
     function playerStand() {
       if (roundOver) return;
-      setStatus("You stand. Dealer's turn.");
       dealerPlayAndSettle();
     }
 
     function dealerPlayAndSettle() {
       hiddenDealer = false;
       renderHands();
-
-      // Dealer hits to 17; stands on soft 17 (as noted).
-      while (true) {
-        const d = handTotals(dealer);
-        if (d.total < 17) {
-          dealer.push(draw());
-          renderHands();
-          continue;
-        }
-        // stands on 17 including soft 17
-        break;
+      while (handTotals(dealer).total < 17) {
+        dealer.push(draw());
+        renderHands();
       }
       settle();
     }
 
     function settle(fromNatural=false) {
-      hiddenDealer = false;
-      renderHands();
-
       const p = handTotals(player).total;
       const d = handTotals(dealer).total;
-
       roundOver = true;
       setButtons();
 
       let result = "";
-      if (p > 21) {
-        stats.losses++;
-        result = "You busted. <b>Dealer wins</b>.";
-      } else if (d > 21) {
+      if (p > 21) { stats.losses++; result = "You busted. Dealer wins."; }
+      else if (d > 21) { stats.wins++; bankroll += currentBet * 2; result = "Dealer busted. You win!"; }
+      else if (p > d) {
         stats.wins++;
-        result = "Dealer busted. <b>You win</b>.";
-      } else if (p > d) {
-        stats.wins++;
-        result = fromNatural && p === 21 && player.length === 2
-          ? "<b>Blackjack!</b> You win."
-          : "<b>You win</b>.";
-      } else if (p < d) {
-        stats.losses++;
-        result = "Dealer wins.";
-      } else {
-        stats.pushes++;
-        result = "<b>Push</b> (tie).";
+        if (fromNatural && p === 21 && player.length === 2) {
+          bankroll += Math.floor(currentBet * 2.5);
+          result = "Blackjack! Paid 3:2.";
+        } else { bankroll += currentBet * 2; result = "You win!"; }
       }
+      else if (p < d) { stats.losses++; result = "Dealer wins."; }
+      else { stats.pushes++; bankroll += currentBet; result = "Push. Bet returned."; }
 
+      currentBet = 0;
+      updateBankrollDisplay();
       elWins.textContent = stats.wins;
       elLosses.textContent = stats.losses;
       elPushes.textContent = stats.pushes;
-
-      setStatus(`${result} Click <b>New Hand</b> to play again.`);
+      setStatus(result + " Place another bet to continue.");
     }
 
-    function revealAndSettle() {
-      if (roundOver) return;
-      setStatus("Revealing and settling…");
-      dealerPlayAndSettle();
-    }
-
-    // ---------- Events ----------
-    btnNew.addEventListener("click", dealInitial);
+    btnPlaceBet.addEventListener("click", startRoundWithBet);
     btnHit.addEventListener("click", playerHit);
     btnStand.addEventListener("click", playerStand);
-    btnReveal.addEventListener("click", revealAndSettle);
+    btnReveal.addEventListener("click", dealerPlayAndSettle);
 
-    window.addEventListener("keydown", (e) => {
-      const key = e.key.toLowerCase();
-      if (key === "n") dealInitial();
-      if (key === "h") playerHit();
-      if (key === "s") playerStand();
-    });
-
-    // Initial boot
-    deck = shuffle(makeDeck());
-    renderHands();
+    updateBankrollDisplay();
     setButtons();
-    setStatus('Click <b>New Hand</b> to deal. Dealer hits to 17 (stands on soft 17).');
+    renderHands();
   </script>
 </body>
 </html>
