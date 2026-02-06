@@ -233,6 +233,10 @@
       <div class="topline">
         <div class="pill">Bankroll: <strong id="bankroll">500</strong> chips</div>
         <div class="pill">Current Bet: <strong id="currentBet">0</strong></div>
+        <div class="pill">
+          Shortcuts:
+          <kbd>P</kbd> Place Bet • <kbd>H</kbd> Hit • <kbd>S</kbd> Stand • <kbd>D</kbd> Double
+        </div>
         <div class="pill">Wins: <span id="wins">0</span> • Losses: <span id="losses">0</span> • Pushes: <span id="pushes">0</span></div>
       </div>
     </header>
@@ -264,16 +268,15 @@
         <div class="bet-controls">
           <label for="betInput">Bet:</label>
           <input id="betInput" type="number" min="1" step="1" value="25" />
-          <button id="btnPlaceBet">Place Bet & Deal</button>
+          <button id="btnPlaceBet" class="primary">Place Bet & Deal</button>
         </div>
         <div class="buttons">
           <button id="btnHit">Hit</button>
           <button id="btnStand">Stand</button>
+          <button id="btnDouble" class="primary">Double Down</button>
           <button id="btnReveal" class="danger">Reveal / Settle</button>
         </div>
-        <div class="status" id="status">
-          Place a bet to start a hand.
-        </div>
+        <div class="status" id="status">Place a bet to start a hand.</div>
       </section>
     </main>
 
@@ -283,6 +286,7 @@
   </div>
 
   <script>
+    // ---------- Blackjack ----------
     const SUITS = [
       { s: "♠", color: "black" },
       { s: "♥", color: "red" },
@@ -316,30 +320,40 @@
     }
 
     function handTotals(hand) {
+      // Returns best total <= 21 if possible, else the lowest total.
+      // isSoft = at least one Ace is still being counted as 11.
       let total = 0;
       let aces = 0;
+
       for (const c of hand) {
         total += cardValue(c.rank);
         if (c.rank === "A") aces++;
       }
+
+      // Convert A(11) -> A(1) by subtracting 10 as needed.
+      // Each subtraction represents one Ace no longer counted as 11.
       while (total > 21 && aces > 0) {
         total -= 10;
         aces--;
       }
-      const isSoft = hand.some(c => c.rank === "A") && total <= 21 && (hand.reduce((t,c)=>t+cardValue(c.rank),0) !== total);
+
+      const isSoft = total <= 21 && aces > 0;
       return { total, isSoft };
     }
 
+    // ---------- State ----------
     let deck = shuffle(makeDeck());
     let player = [];
     let dealer = [];
     let hiddenDealer = true;
     let roundOver = true;
+
     let bankroll = 500;
     let currentBet = 0;
 
     const stats = { wins: 0, losses: 0, pushes: 0 };
 
+    // ---------- DOM ----------
     const elDealerHand = document.getElementById("dealerHand");
     const elPlayerHand = document.getElementById("playerHand");
     const elDealerScore = document.getElementById("dealerScore");
@@ -347,9 +361,11 @@
     const elDealerHint = document.getElementById("dealerHint");
     const elPlayerHint = document.getElementById("playerHint");
     const elStatus = document.getElementById("status");
+
     const elWins = document.getElementById("wins");
     const elLosses = document.getElementById("losses");
     const elPushes = document.getElementById("pushes");
+
     const elBankroll = document.getElementById("bankroll");
     const elCurrentBet = document.getElementById("currentBet");
     const betInput = document.getElementById("betInput");
@@ -357,22 +373,35 @@
     const btnPlaceBet = document.getElementById("btnPlaceBet");
     const btnHit = document.getElementById("btnHit");
     const btnStand = document.getElementById("btnStand");
+    const btnDouble = document.getElementById("btnDouble");
     const btnReveal = document.getElementById("btnReveal");
 
-    function setStatus(html) { elStatus.innerHTML = html; }
+    function setStatus(html) {
+      elStatus.innerHTML = html;
+    }
+
     function updateBankrollDisplay() {
       elBankroll.textContent = bankroll;
       elCurrentBet.textContent = currentBet;
     }
 
     function ensureDeck() {
+      // infinite shoe feel: reshuffle when low
       if (deck.length < 15) deck = shuffle(makeDeck());
     }
-    function draw() { ensureDeck(); return deck.pop(); }
+
+    function draw() {
+      ensureDeck();
+      return deck.pop();
+    }
 
     function renderCard(c, faceDown=false) {
       const div = document.createElement("div");
-      if (faceDown) { div.className = "card back"; return div; }
+      if (faceDown) {
+        div.className = "card back";
+        div.title = "Face down";
+        return div;
+      }
       div.className = `card ${c.color}`;
       const small = document.createElement("div");
       small.className = "small";
@@ -382,6 +411,7 @@
       big.textContent = c.suit;
       div.appendChild(small);
       div.appendChild(big);
+      div.title = `${c.rank}${c.suit}`;
       return div;
     }
 
@@ -393,6 +423,7 @@
         const faceDown = hiddenDealer && idx === 0;
         elDealerHand.appendChild(renderCard(c, faceDown));
       });
+
       player.forEach(c => elPlayerHand.appendChild(renderCard(c)));
 
       const p = handTotals(player);
@@ -403,7 +434,9 @@
         if (dealer.length > 1) {
           const up = handTotals([dealer[1]]);
           elDealerScore.textContent = `${up.total} + ?`;
-        } else elDealerScore.textContent = "?";
+        } else {
+          elDealerScore.textContent = "?";
+        }
         elDealerHint.textContent = "";
       } else {
         const d = handTotals(dealer);
@@ -416,98 +449,283 @@
       btnHit.disabled = roundOver;
       btnStand.disabled = roundOver;
       btnReveal.disabled = roundOver;
+      btnDouble.disabled = roundOver || player.length !== 2;
       btnPlaceBet.disabled = !roundOver;
     }
 
-    function startRoundWithBet() {
-      const bet = Number(betInput.value);
-      if (bet <= 0 || bet > bankroll) {
-        setStatus("Invalid bet amount.");
-        return;
-      }
-      currentBet = bet;
-      bankroll -= bet;
-      updateBankrollDisplay();
-
+    function resetRound() {
       player = [];
       dealer = [];
       hiddenDealer = true;
       roundOver = false;
       setButtons();
+    }
 
+    function startRoundWithBet() {
+      const bet = Number(betInput.value);
+      if (!Number.isFinite(bet) || bet <= 0 || bet > bankroll) {
+        setStatus("Invalid bet amount.");
+        return;
+      }
+
+      currentBet = bet;
+      bankroll -= bet;
+      updateBankrollDisplay();
+
+      resetRound();
+
+      // Initial deal
       dealer.push(draw(), draw());
       player.push(draw(), draw());
+
       renderHands();
+      setButtons(); // enables Double Down while player has exactly 2 cards
 
       const p = handTotals(player).total;
       const d = handTotals(dealer).total;
+
+      // Natural check
       if (p === 21 || d === 21) {
         hiddenDealer = false;
         renderHands();
         settle(true);
-      } else {
-        setStatus("Your move: <b>Hit</b> or <b>Stand</b>.");
+        return;
       }
+
+      setStatus("Your move: <b>Hit</b>, <b>Stand</b>, or <b>Double Down</b>.");
     }
 
     function playerHit() {
       if (roundOver) return;
+
       player.push(draw());
       renderHands();
+      setButtons();
+
       const p = handTotals(player).total;
-      if (p > 21) { hiddenDealer = false; renderHands(); settle(); }
+      if (p > 21) {
+        hiddenDealer = false;
+        renderHands();
+        settle(false);
+      } else if (p === 21) {
+        setStatus("You hit <b>21</b>. Dealer will play out.");
+        dealerPlayAndSettle();
+      } else {
+        setStatus("You drew a card. Still your move.");
+      }
     }
 
     function playerStand() {
       if (roundOver) return;
+      setStatus("You stand. Dealer's turn.");
+      dealerPlayAndSettle();
+    }
+
+    function playerDoubleDown() {
+      if (roundOver) return;
+      if (player.length !== 2) return;
+
+      // must match current bet
+      if (bankroll < currentBet) {
+        setStatus("Not enough chips to double down.");
+        return;
+      }
+
+      bankroll -= currentBet;
+      currentBet *= 2;
+      updateBankrollDisplay();
+
+      player.push(draw());
+      renderHands();
+      setButtons();
+
+      setStatus("Double down! One card only.");
       dealerPlayAndSettle();
     }
 
     function dealerPlayAndSettle() {
       hiddenDealer = false;
       renderHands();
+
+      // Dealer hits to 17; stands on soft 17.
       while (handTotals(dealer).total < 17) {
         dealer.push(draw());
         renderHands();
       }
-      settle();
+
+      settle(false);
     }
 
     function settle(fromNatural=false) {
+      hiddenDealer = false;
+      renderHands();
+
       const p = handTotals(player).total;
       const d = handTotals(dealer).total;
+
       roundOver = true;
       setButtons();
 
       let result = "";
-      if (p > 21) { stats.losses++; result = "You busted. Dealer wins."; }
-      else if (d > 21) { stats.wins++; bankroll += currentBet * 2; result = "Dealer busted. You win!"; }
-      else if (p > d) {
+
+      if (p > 21) {
+        stats.losses++;
+        result = "You busted. <b>Dealer wins</b>.";
+      } else if (d > 21) {
+        stats.wins++;
+        bankroll += currentBet * 2;
+        result = "Dealer busted. <b>You win</b>.";
+      } else if (p > d) {
         stats.wins++;
         if (fromNatural && p === 21 && player.length === 2) {
+          // blackjack: 3:2. total return to player is 2.5x of original bet.
           bankroll += Math.floor(currentBet * 2.5);
-          result = "Blackjack! Paid 3:2.";
-        } else { bankroll += currentBet * 2; result = "You win!"; }
+          result = "<b>Blackjack!</b> Paid 3:2.";
+        } else {
+          bankroll += currentBet * 2;
+          result = "<b>You win</b>.";
+        }
+      } else if (p < d) {
+        stats.losses++;
+        result = "Dealer wins.";
+      } else {
+        stats.pushes++;
+        bankroll += currentBet;
+        result = "<b>Push</b> (tie).";
       }
-      else if (p < d) { stats.losses++; result = "Dealer wins."; }
-      else { stats.pushes++; bankroll += currentBet; result = "Push. Bet returned."; }
 
       currentBet = 0;
       updateBankrollDisplay();
+
       elWins.textContent = stats.wins;
       elLosses.textContent = stats.losses;
       elPushes.textContent = stats.pushes;
-      setStatus(result + " Place another bet to continue.");
+
+      setStatus(`${result} Place another bet to continue.`);
     }
 
+    function revealAndSettle() {
+      if (roundOver) return;
+      setStatus("Revealing and settling…");
+      dealerPlayAndSettle();
+    }
+
+    // ---------- Events ----------
     btnPlaceBet.addEventListener("click", startRoundWithBet);
     btnHit.addEventListener("click", playerHit);
     btnStand.addEventListener("click", playerStand);
-    btnReveal.addEventListener("click", dealerPlayAndSettle);
+    btnDouble.addEventListener("click", playerDoubleDown);
+    btnReveal.addEventListener("click", revealAndSettle);
 
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "p") startRoundWithBet();
+      if (k === "h") playerHit();
+      if (k === "s") playerStand();
+      if (k === "d") playerDoubleDown();
+    });
+
+    // ---------- Self-tests (console) ----------
+    // No framework. These run once on load and log results.
+    function assert(name, condition) {
+      if (!condition) {
+        console.error(`❌ Test failed: ${name}`);
+        return false;
+      }
+      console.log(`✅ ${name}`);
+      return true;
+    }
+
+    function runSelfTests() {
+      // handTotals tests
+      assert("handTotals: A + 9 = 20 (soft)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"9",suit:"♣",color:"black"}];
+        const t = handTotals(h);
+        return t.total === 20 && t.isSoft === true;
+      })());
+
+      assert("handTotals: A + A + 9 = 21 (soft)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"A",suit:"♥",color:"red"},{rank:"9",suit:"♣",color:"black"}];
+        const t = handTotals(h);
+        return t.total === 21 && t.isSoft === true;
+      })());
+
+      assert("handTotals: A + A + 9 + 9 = 20 (hard)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"A",suit:"♥",color:"red"},{rank:"9",suit:"♣",color:"black"},{rank:"9",suit:"♦",color:"red"}];
+        const t = handTotals(h);
+        return t.total === 20 && t.isSoft === false;
+      })());
+
+      // Added: more Ace edge cases
+      assert("handTotals: A + K = 21 (soft)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"K",suit:"♣",color:"black"}];
+        const t = handTotals(h);
+        return t.total === 21 && t.isSoft === true;
+      })());
+
+      assert("handTotals: A + 9 + 9 = 19 (hard)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"9",suit:"♣",color:"black"},{rank:"9",suit:"♦",color:"red"}];
+        const t = handTotals(h);
+        return t.total === 19 && t.isSoft === false;
+      })());
+
+      assert("handTotals: A + A + 8 = 20 (soft)", (() => {
+        const h = [{rank:"A",suit:"♠",color:"black"},{rank:"A",suit:"♥",color:"red"},{rank:"8",suit:"♦",color:"red"}];
+        const t = handTotals(h);
+        return t.total === 20 && t.isSoft === true;
+      })());
+
+      // payout sanity tests (simulate settle outcomes)
+      const snapshot = {
+        deck, player, dealer, hiddenDealer, roundOver, bankroll, currentBet,
+        stats: { ...stats },
+        ui: {
+          wins: elWins.textContent,
+          losses: elLosses.textContent,
+          pushes: elPushes.textContent,
+          status: elStatus.innerHTML,
+        }
+      };
+
+      // force a deterministic win (non-blackjack): bet 10, bankroll 100 -> should end at 120
+      bankroll = 100;
+      currentBet = 10;
+      player = [{rank:"10",suit:"♠",color:"black"},{rank:"9",suit:"♣",color:"black"}]; // 19
+      dealer = [{rank:"10",suit:"♥",color:"red"},{rank:"8",suit:"♦",color:"red"}]; // 18
+      hiddenDealer = false;
+      roundOver = false;
+      settle(false);
+      assert("payout: normal win pays 1:1", bankroll === 120); // +20 (return 2x bet)
+
+      // restore snapshot (so UI/game starts clean)
+      deck = snapshot.deck;
+      player = snapshot.player;
+      dealer = snapshot.dealer;
+      hiddenDealer = snapshot.hiddenDealer;
+      roundOver = snapshot.roundOver;
+      bankroll = snapshot.bankroll;
+      currentBet = snapshot.currentBet;
+      stats.wins = snapshot.stats.wins;
+      stats.losses = snapshot.stats.losses;
+      stats.pushes = snapshot.stats.pushes;
+
+      elWins.textContent = snapshot.ui.wins;
+      elLosses.textContent = snapshot.ui.losses;
+      elPushes.textContent = snapshot.ui.pushes;
+      elStatus.innerHTML = snapshot.ui.status;
+
+      updateBankrollDisplay();
+      renderHands();
+      setButtons();
+    }
+
+    // Boot
     updateBankrollDisplay();
-    setButtons();
     renderHands();
+    setButtons();
+    setStatus('Place a bet to start a hand.');
+
+    runSelfTests();
   </script>
 </body>
 </html>
