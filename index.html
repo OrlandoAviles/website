@@ -3,23 +3,298 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Creative Dojo</title>
+  <title>Orlando Aviles | Front-End Systems</title>
+  <meta name="description" content="Front-end developer specializing in interactive systems, real-time UI, and browser-based tools." />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      background: #0f1220;
+      color: #e6e8f0;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .site-header {
+      background: #151935;
+      border-bottom: 1px solid #2a2f55;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .logo-sub {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9aa0ff;
+      margin-top: 0.25rem;
+    }
+
+    .nav a {
+      color: #cfd3ff;
+      margin-left: 1.5rem;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .nav a:hover {
+      color: #ffffff;
+    }
+
+    /* HERO */
+    .hero {
+      padding: 6rem 0 5rem;
+      background: linear-gradient(180deg, #151935 0%, #0f1220 100%);
+      text-align: center;
+    }
+
+    .hero h2 {
+      font-size: 2.4rem;
+      max-width: 720px;
+      margin: 0 auto 1.2rem;
+    }
+
+    .hero p {
+      max-width: 650px;
+      margin: 0 auto 2.5rem;
+      color: #b8bde6;
+      font-size: 1.05rem;
+    }
+
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 0.7rem 1.4rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .btn.primary {
+      background: #6c63ff;
+      color: white;
+    }
+
+    .btn.secondary {
+      background: transparent;
+      border: 1px solid #6c63ff;
+      color: #cfd3ff;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    /* SECTIONS */
+    .section {
+      padding: 4.5rem 0;
+    }
+
+    .section.alt {
+      background: #141833;
+    }
+
+    .section h3 {
+      font-size: 1.8rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .section p {
+      max-width: 720px;
+      margin-bottom: 2rem;
+      color: #b8bde6;
+    }
+
+    /* TAG */
+    .project-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      margin-bottom: 1rem;
+      border-radius: 999px;
+      background: rgba(108, 99, 255, 0.15);
+      border: 1px solid rgba(108, 99, 255, 0.4);
+      color: #cfd3ff;
+    }
+
+    /* CARD GRID */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #1b2042;
+      padding: 1.6rem;
+      border-radius: 14px;
+      border: 1px solid #2a2f55;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+    }
+
+    .project-card h4 {
+      margin-bottom: 0.4rem;
+      color: #ffffff;
+    }
+
+    /* FOOTER */
+    .site-footer {
+      padding: 2.5rem 0;
+      text-align: center;
+      border-top: 1px solid #2a2f55;
+      color: #8f95c9;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .hero h2 {
+        font-size: 2rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div id="site-header"></div>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="logo">Orlando Aviles<span class="logo-sub">Front-End Systems</span></h1>
+      <nav class="nav">
+        <a href="#sequencer" class="btn primary">Sequencer</a>
+        <a href="#projects">Applications</a>
+        <a href="#about">About</a>
+      </nav>
+    </div>
+  </header>
 
   <main>
-    <div id="hero"></div>
-    <div id="dojo"></div>
-    <div id="vfa"></div>
-    <div id="projects"></div>
-    <div id="about"></div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <h2>I design and build interactive front-end systems.</h2>
+        <p>
+          I specialize in building real-time interfaces and browser-based tools with clear state management and intentional UI design.
+        </p>
+        <div class="hero-buttons">
+          <a href="#sequencer" class="btn primary">View Sequencer</a>
+          <a href="#projects" class="btn secondary">Supporting Apps</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FLAGSHIP PROJECT -->
+    <section id="sequencer" class="section alt">
+      <div class="container">
+        <h3>Sequencer</h3>
+        <span class="project-tag">Flagship Application</span>
+        <p>
+          Sequencer is a browser-based beat sequencing tool built with the Web Audio API.
+          It focuses on precise audio timing, real-time input handling, and state-driven interface architecture.
+        </p>
+        <a href="sequencer/index.html" class="btn primary" target="_blank">Launch Sequencer</a>
+      </div>
+    </section>
+
+    <!-- SUPPORTING PROJECTS -->
+    <section id="projects" class="section">
+      <div class="container">
+        <h3>Supporting Applications</h3>
+        <div class="card-grid">
+
+          <a class="card project-card" href="planner/index.html" target="_blank">
+            <div class="project-content">
+              <h4>Journal & Planner</h4>
+              <p>Daily planning and journaling tool focused on structured input and persistence.</p>
+            </div>
+          </a>
+
+          <a class="card project-card" href="weather/index.html" target="_blank">
+            <div class="project-content">
+              <h4>Weather Dashboard</h4>
+              <p>API-driven dashboard displaying forecasts and conditions with clear data hierarchy.</p>
+            </div>
+          </a>
+
+          <a class="card project-card" href="blackjack/index.html" target="_blank">
+            <div class="project-content">
+              <h4>Blackjack Simulator</h4>
+              <p>Rules-based card game demonstrating probability logic and UI state transitions.</p>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="section alt">
+      <div class="container">
+        <h3>About</h3>
+        <p>
+          I’m a front-end developer focused on building interactive systems that balance
+          structure, usability, and performance. I enjoy working on tools that require
+          careful state management and thoughtful UI design.
+        </p>
+      </div>
+    </section>
+
   </main>
 
-  <div id="site-footer"></div>
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 Orlando Aviles – Front-End Systems</p>
+    </div>
+  </footer>
 
-  <script src="js/main.js"></script>
 </body>
-
 </html>
