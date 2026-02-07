@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orlando Aviles | Front-End Systems</title>
   <meta name="description" content="Front-end developer specializing in interactive systems, real-time UI, and browser-based tools." />
-  <link rel="stylesheet" href="styles.css" />
   <style>
     * {
       box-sizing: border-box;
@@ -22,18 +21,24 @@
 
     .container {
       width: 90%;
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }
 
     /* HEADER */
     .site-header {
       background: #151935;
-      border-bottom: 1px solid #2a2f55;
+      border-bottom: 2px solid #00a1c9;
       position: sticky;
       top: 0;
       z-index: 10;
     }
+
+    .site-header .header-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
 
     .header-inner {
       display: flex;
@@ -56,7 +61,7 @@
       font-weight: 600;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: #9aa0ff;
+      color: #2e9ee9;
       margin-top: 0.25rem;
     }
 
@@ -71,17 +76,29 @@
       color: #ffffff;
     }
 
+    .nowrap {
+      white-space: nowrap;
+    }
+
     /* HERO */
     .hero {
       padding: 6rem 0 5rem;
-      background: linear-gradient(180deg, #151935 0%, #0f1220 100%);
+      background: linear-gradient(180deg, #1b246b 0%, #0f1220 100%);
       text-align: center;
+      min-height: 95vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero .container {
+      transform: translateY(-10vh);
     }
 
     .hero h2 {
       font-size: 2.4rem;
-      max-width: 720px;
+      max-width: 1000px;
       margin: 0 auto 1.2rem;
+      line-height: 1.15;
     }
 
     .hero p {
@@ -109,13 +126,13 @@
     }
 
     .btn.primary {
-      background: #6c63ff;
+      background: #0093ce;
       color: white;
     }
 
     .btn.secondary {
       background: transparent;
-      border: 1px solid #6c63ff;
+      border: 1px solid #1fa7dd;
       color: #cfd3ff;
     }
 
@@ -153,8 +170,8 @@
       padding: 5px 10px;
       margin-bottom: 1rem;
       border-radius: 999px;
-      background: rgba(108, 99, 255, 0.15);
-      border: 1px solid rgba(108, 99, 255, 0.4);
+      background: rgba(21, 37, 255, 0.15);
+      border: 2px solid rgb(90, 134, 255);
       color: #cfd3ff;
     }
 
@@ -169,7 +186,7 @@
       background: #1b2042;
       padding: 1.6rem;
       border-radius: 14px;
-      border: 1px solid #2a2f55;
+      border: 1px solid #0097bd;
       text-decoration: none;
       color: inherit;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -184,13 +201,42 @@
       margin-bottom: 0.4rem;
       color: #ffffff;
     }
+    /* FLAGSHIP */
+    .flagship-image {
+      display: block;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto 2.5rem;
+      border-radius: 14px;
+      border: 1px solid #008bcc;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+    }
+
+    #sequencer {
+      scroll-margin-top: 50px;
+    }
+
+    .sequencer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .sequencer-title {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
 
     /* FOOTER */
     .site-footer {
       padding: 2.5rem 0;
       text-align: center;
-      border-top: 1px solid #2a2f55;
-      color: #8f95c9;
+      border-top: 1px solid #005fad;
+      color: #8fbbc9;
       font-size: 0.85rem;
     }
 
@@ -220,7 +266,10 @@
     <!-- HERO -->
     <section class="hero">
       <div class="container">
-        <h2>I design and build interactive front-end systems.</h2>
+        <h2>
+          I design and build interactive
+          <span class="nowrap">front-end systems</span>.
+        </h2>
         <p>
           I specialize in building real-time interfaces and browser-based tools with clear state management and intentional UI design.
         </p>
@@ -233,16 +282,35 @@
 
     <!-- FLAGSHIP PROJECT -->
     <section id="sequencer" class="section alt">
-      <div class="container">
+  <div class="container">
+
+    <img
+      src="images/sequencer-main.png"
+      alt="Sequencer beat sequencing interface with timeline and controls"
+      class="flagship-image"
+    />
+
+    <div class="sequencer-header">
+      <div class="sequencer-title">
         <h3>Sequencer</h3>
         <span class="project-tag">Flagship Application</span>
-        <p>
-          Sequencer is a browser-based beat sequencing tool built with the Web Audio API.
-          It focuses on precise audio timing, real-time input handling, and state-driven interface architecture.
-        </p>
-        <a href="sequencer/index.html" class="btn primary" target="_blank">Launch Sequencer</a>
       </div>
-    </section>
+
+      <a href="sequencer/index.html"
+        class="btn primary sequencer-cta"
+        target="_blank">
+        Launch Sequencer
+      </a>
+    </div>
+
+    <p>
+      Sequencer is a browser-based beat sequencing tool built with the Web Audio API.
+      It focuses on precise audio timing, real-time input handling, and
+      state-driven interface architecture.
+    </p>
+
+  </div>
+</section>
 
     <!-- SUPPORTING PROJECTS -->
     <section id="projects" class="section">
