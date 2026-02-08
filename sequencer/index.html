@@ -360,7 +360,8 @@ function quantizeCurrentTakeInPlace(){
  * TRANSPORT + PLAYBACK
  **********************/
 function setPlayheadBar(bar){
-  state.playheadBar = Math.max(1, bar);
+  const raw = Math.max(1, bar);
+  state.playheadBar = state.snap ? quantizeBar(raw) : raw;
   document.getElementById('playheadLabel').textContent = 'bar '+Math.floor(state.playheadBar);
   drawTimeline();
 }
