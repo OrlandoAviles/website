@@ -409,6 +409,12 @@ function playTimeline(){
 }
 
 function stopAll(){
+  if(!state.isPlaying && !state.isRecording){
+    // second stop press: hard reset playhead
+    setPlayheadBar(1);
+    setStatus('reset to start');
+    return;
+  }
   state.isRecording=false;
   state.isPlaying=false;
   setStatus('stopped');
