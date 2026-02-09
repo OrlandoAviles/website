@@ -1,0 +1,114 @@
+    :root{
+      --bg:#0f0f12; --panel:#17171c; --panel2:#121216; --border:#2d2d35;
+      --text:#eee; --muted:rgba(255,255,255,.72);
+    }
+    body{
+      margin:0;
+      font-family:system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .app{
+      width:min(1100px,98vw);
+      margin:16px auto;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:18px;
+      opacity:.95;
+    }
+    .muted{
+      opacity:.75;
+      font-size:13px;
+    }
+    .panel{
+      border:1px solid var(--border);
+      background:var(--panel);border-radius:16px;
+      padding:14px;
+      box-shadow:0 14px 40px rgba(0,0,0,.45)
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px}
+    button{
+      border-radius:12px;
+      border:1px solid #444;background:#23232b;color:#fff;padding:10px 12px;
+      cursor:pointer
+    }
+    button.primary{
+      background:#2a2a42;
+      border-color:#5757aa
+    }
+    button.danger{
+      background:#382023;
+      border-color:#a35
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:13px;
+      opacity:.95
+    }
+    input[type=range]{
+      width:220px
+    }
+    select{
+      border-radius:12px;
+      border:1px solid #444;
+      background:#23232b;
+      color:#fff;
+      padding:10px 12px
+    }
+
+    /* Beat pads */
+    .pads{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-top:12px
+    }
+    .pad{
+      height:84px;
+      border-radius:14px;
+      border:1px solid #444;
+      background:#202028;
+      color:#fff;
+      font-size:16px;
+      cursor:pointer;
+      user-select:none;
+      touch-action:none;-webkit-tap-highlight-color:transparent
+    }
+    .pad:active{
+      transform:scale(.985);
+      filter:brightness(1.15)
+    }
+
+    /* Timeline */
+    .timelineWrap{
+      margin-top:14px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      border-radius:16px;
+      padding:10px
+    }
+    canvas{width:100%;
+      height:220px;border-radius:12px;
+      background:#0d0d12;
+      border:1px solid #23232d;
+      display:block
+    }
+    .hint{
+      margin-top:8px
+    }
