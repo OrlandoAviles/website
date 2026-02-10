@@ -29,12 +29,16 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
 
       return fetch(event.request).then(response => {
+        // Clone immediately
+        const responseClone = response.clone();
+
         // Cache images as they are fetched
         if (event.request.destination === 'image') {
           caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, response.clone());
+            cache.put(event.request, responseClone);
           });
         }
+
         return response;
       });
     })
