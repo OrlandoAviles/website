@@ -47,6 +47,16 @@ window.randomizeAuras = function randomizeAuras() {
 };
 
 /*********************************************************
+ * SERVICE WORKER
+ *********************************************************/
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('Tarot service worker registered'))
+    .catch(err => console.error('SW registration failed:', err));
+}
+
+/*********************************************************
  * INIT
  *********************************************************/
 loadSettings();
