@@ -38,12 +38,31 @@ padding:14px;
 box-shadow:0 14px 40px rgba(0,0,0,.45);
 }
 
+/* =============================
+TWO COLUMN CORE LAYOUT
+============================= */
+
 .row{
-display:flex;
+display:grid;
+grid-template-columns:1fr 1fr;
 gap:10px;
-flex-wrap:wrap;
-align-items:center;
 margin-top:10px;
+align-items:center;
+}
+
+/* Elements that should span both columns */
+input[type=range],
+select{
+width:100%;
+}
+
+/* Status row spans full width per item */
+.row.status-row{
+grid-template-columns:1fr 1fr;
+}
+
+.row.status-row .pill{
+grid-column:auto;
 }
 
 button{
@@ -53,6 +72,7 @@ background:#23232b;
 color:#fff;
 padding:10px 12px;
 cursor:pointer;
+width:100%;
 }
 
 button.primary{
@@ -71,9 +91,10 @@ cursor:not-allowed;
 }
 
 .pill{
-display:inline-flex;
+display:flex;
 gap:8px;
 align-items:center;
+justify-content:center;
 border:1px solid var(--border);
 background:var(--panel2);
 padding:8px 10px;
@@ -82,31 +103,19 @@ font-size:13px;
 opacity:.95;
 }
 
-input[type=range]{
-width:220px;
-}
-
-select{
-border-radius:12px;
-border:1px solid #444;
-background:#23232b;
-color:#fff;
-padding:10px 12px;
-}
-
 /* =============================
 BEAT PADS
 ============================= */
 
 .pads{
 display:grid;
-grid-template-columns:repeat(3,1fr);
+grid-template-columns:1fr 1fr;
 gap:12px;
 margin-top:12px;
 }
 
 .pad{
-height:84px;
+height:90px;
 border-radius:14px;
 border:1px solid #444;
 background:#202028;
@@ -151,89 +160,12 @@ margin-top:8px;
 }
 
 /* =============================
-RESPONSIVE: TABLET
+SMALL DEVICES TWEAK
 ============================= */
 
-@media (max-width: 900px){
-.app{ width:95vw; }
-input[type=range]{ width:180px; }
-}
-
-/* =============================
-RESPONSIVE: MOBILE PORTRAIT
-============================= */
-
-@media (max-width: 768px){
-
-/* Stack rows but keep console feel */
-.row{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-}
-
-/* Make status row single column */
-.row:nth-of-type(4){
-grid-template-columns:1fr;
-}
-
-.pill{
-justify-content:center;
-}
-
-input[type=range]{
-grid-column:1 / -1;
-width:100%;
-}
-
-select{
-grid-column:1 / -1;
-}
-
-button{
-width:100%;
-}
-
-/* Pads become 2-column grid */
-.pads{
-grid-template-columns:repeat(2,1fr);
-}
-
-.pad{
-height:100px;
-font-size:18px;
-}
-
-canvas{
-height:200px;
-min-width:600px;
-}
-}
-
-/* =============================
-RESPONSIVE: SMALL PHONES
-============================= */
-
-@media (max-width: 480px){
-
+@media (max-width:480px){
 h1{ font-size:16px; }
 .muted{ font-size:12px; }
-
-/* Collapse to single column for tight screens */
-.row{
-grid-template-columns:1fr;
-}
-
-.pads{
-grid-template-columns:1fr;
-}
-
-.pad{
-height:110px;
-}
-
-canvas{
-height:180px;
-min-width:500px;
-}
+.pad{ height:100px; }
+canvas{ height:190px; min-width:600px; }
 }
