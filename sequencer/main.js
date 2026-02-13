@@ -219,7 +219,7 @@ function makeClipFromTake(){
   if(!state.takeHits.length) return null;
 
   const clip={
-    id: 'clip'+(currentProject.timeline.nextId++),
+    id: 'clip'+(timeline.nextId),   // ← DO NOT increment here
     name: 'Take '+(timeline.clips.length+1),
     startBar: currentProject.ui.snap ? quantizeBar(state.playheadBar) : Math.round(state.playheadBar),
     lengthBars: Math.max(1, Math.ceil((state.takeLength+0.25)/secondsPerBar())),
@@ -228,11 +228,15 @@ function makeClipFromTake(){
     swing: currentProject.audio.swing
   };
 
-  mutations.addClip(clip);
+  mutations.bumpNextClipId();   // ← increment ID counter
+  mutations.addClip(clip);      // ← actually add clip to project
+
   document.getElementById('clipCount').textContent = timeline.clips.length;
   drawTimeline();
+
   return clip;
 }
+
 
 function quantizeCurrentTakeInPlace(){
   if(!state.takeHits.length){ setStatus('no take to quantize'); return; }
@@ -471,7 +475,8 @@ canvas.addEventListener('pointerdown',(e)=>{
     let workingClip=clip;
     if(e.altKey){
       workingClip=structuredClone(clip);
-      workingClip.id='clip'+(currentProject.timeline.nextId++);
+      workingClip.id = 'clip'+(timeline.nextId);
+      mutations.bumpNextClipId();
       workingClip.name=clip.name+' copy';
       mutations.addClip(workingClip);
       document.getElementById('clipCount').textContent = timeline.clips.length;
@@ -498,29 +503,39 @@ canvas.addEventListener('pointermove',(e)=>{
 
   if(drag.mode==='move'){
     const raw = Math.max(1, drag.startStartBar + dxBars);
-    mutations.updateClip(drag.clip.id, {
-      startBar: currentProject.ui.snap ? quantizeBar(raw) : raw
-    });
+    const startBar = currentProject.ui.snap ? quantizeBar(raw) : raw;
+
+    mutations.updateClip(drag.clip.id, { startBar });
+
   } else if(drag.mode==='resizeL'){
-      mutations.updateClip(drag.clip.id, {
-        startBar: newStart,
-        lengthBars: newLength
-      });
-  } else if(drag.mode==='resizeR'){
-      mutations.updateClip(drag.clip.id, {
+    const end = drag.startStartBar + drag.startLen;               // fixed right edge
+    const rawStart = Math.max(1, drag.startStartBar + dxBars);
+    const snappedStart = currentProject.ui.snap ? quantizeBar(rawStart) : rawStart;
+
+    const newStart = Math.min(snappedStart, end - 1);
+    const newLength = Math.max(1, end - newStart);
+
+    mutations.updateClip(drag.clip.id, {
+      startBar: newStart,
       lengthBars: newLength
     });
-  }
 
-  // Persisted clip mutations are still direct right now.
-  // That’s okay for Step 1, but we’ll route clip edits through mutations next.
-  // For now, nudge modified timestamp so autosave would eventually trigger.
-  // (When we wire autosave, this matters.)
-  // Note: keep it light to avoid changing behavior.
-  // mutations.markProjectModified? Not exported; we’ll add clip update helpers in Step 1.5.
+  } else if(drag.mode==='resizeR'){
+    const rawLen = Math.max(1, drag.startLen + dxBars);
+
+    let newLength = rawLen;
+    if(currentProject.ui.snap && currentProject.audio.quantize!=='off'){
+      const rightEdge = drag.startStartBar + rawLen;
+      const snappedRight = quantizeBar(rightEdge);
+      newLength = Math.max(1, snappedRight - drag.startStartBar);
+    }
+
+    mutations.updateClip(drag.clip.id, { lengthBars: newLength });
+  }
 
   drawTimeline();
 });
+
 
 canvas.addEventListener('pointerup',()=>{ drag=null; });
 canvas.addEventListener('pointercancel',()=>{ drag=null; });
