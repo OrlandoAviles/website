@@ -3,101 +3,66 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mini DAW</title>
+  <title>Flagship Sequencer (Mini DAW)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<div class="app">
+  <div class="panel">
+    <h1>🎛️ Sequencer</h1>
+    <div class="muted">Record a performance → it becomes a Clip → drag it on the bar timeline like a DAW. Quantize + swing + snap included.</div>
 
-<div class="workspace">
-
-  <div class="main-area">
-
-    <!-- TRANSPORT -->
-    <div class="transport">
-      <div class="transport-row">
-        <button id="btnStartAudio">🔊 Start</button>
-        <button id="btnMetro">🕰 Metro</button>
-        <button id="btnRecord">⏺ Record</button>
-        <button id="btnStop">⏹ Stop</button>
-        <button id="btnPlay">▶ Play</button>
-        <button id="btnAddClip">➕ Clip</button>
-        <button id="btnClearClips">🧽 Clear</button>
-      </div>
-
-      <div class="transport-row sliders">
-        <label>BPM <span id="bpmLabel">120</span></label>
-        <input id="bpm" type="range" min="60" max="200" value="120" />
-
-        <label>Latency <span id="latLabel">45</span>ms</label>
-        <input id="lat" type="range" min="0" max="120" value="45" />
-
-        <label>Zoom <span id="zoomLabel">1.00</span>x</label>
-        <input id="zoom" type="range" min="0.5" max="3" step="0.05" value="1" />
-      </div>
-
-      <div class="transport-row status">
-        <span id="status">Status: <code>idle</code></span>
-        <span>Take: <code id="takeHits">0</code></span>
-        <span>Clips: <code id="clipCount">0</code></span>
-        <span>Playhead: <code id="playheadLabel">bar 1</code></span>
-      </div>
+    <div class="row">
+      <button id="btnStartAudio" class="primary">🔊 Start Audio</button>
+      <button id="btnMetro">🕰️ Metronome</button>
+      <button id="btnRecord" class="danger">⏺ Record Take</button>
+      <button id="btnStop">⏹ Stop</button>
+      <button id="btnPlay" class="primary">▶️ Play Timeline</button>
+      <button id="btnAddClip">➕ Make Clip from Take</button>
+      <button id="btnClearClips">🧽 Clear Clips</button>
     </div>
 
-    <!-- PERFORMANCE + ARRANGEMENT -->
-    <div class="vertical-stack">
-
-      <div class="performance-pane">
-        <div class="pads" id="pads"></div>
-      </div>
-
-      <div class="splitter" id="splitter"></div>
-
-      <div class="arrangement-pane">
-        <canvas id="timeline" width="1400" height="260"></canvas>
-      </div>
-
+    <div class="row">
+      <span class="pill">BPM: <code id="bpmLabel">120</code></span>
+      <input id="bpm" type="range" min="60" max="200" value="120" />
+      <span class="pill">Latency: <code id="latLabel">45</code>ms</span>
+      <input id="lat" type="range" min="0" max="120" value="45" />
+      <span class="pill">Zoom: <code id="zoomLabel">1.00</code>x</span>
+      <input id="zoom" type="range" min="0.5" max="3" step="0.05" value="1" />
     </div>
 
-  </div>
-
-  <!-- SIDE PANEL -->
-  <div class="side-panel" id="sidePanel">
-
-    <h2>Project</h2>
-
-    <div class="side-group">
-      <label>Quantize <span id="qLabel">OFF</span></label>
+    <div class="row">
+      <span class="pill">Quantize: <code id="qLabel">OFF</code></span>
       <select id="quantize">
         <option value="off">Off</option>
-        <option value="1/4">1/4</option>
-        <option value="1/8">1/8</option>
-        <option value="1/16" selected>1/16</option>
-        <option value="1/32">1/32</option>
+        <option value="1/4">1/4 (quarter)</option>
+        <option value="1/8">1/8 (eighth)</option>
+        <option value="1/16" selected>1/16 (sixteenth)</option>
+        <option value="1/32">1/32 (thirty-second)</option>
       </select>
-    </div>
-
-    <div class="side-group">
-      <label>Swing <span id="swingLabel">0%</span></label>
+      <span class="pill">Swing: <code id="swingLabel">0%</code></span>
       <input id="swing" type="range" min="0" max="60" value="0" />
-    </div>
-
-    <div class="side-group">
-      <button id="btnSnap">🧲 Toggle Snap</button>
+      <span class="pill">Snap-to-grid: <code id="snapLabel">ON</code></span>
+      <button id="btnSnap" class="primary">🧲 Toggle Snap</button>
       <button id="btnQTake">✨ Quantize Take</button>
     </div>
 
-    <hr />
-
-    <div class="side-group">
-      <button id="btnExport">💾 Export Project</button>
-      <button id="btnImport">📂 Import Project</button>
-      <input type="file" id="importFile" accept=".json" hidden />
+    <div class="row">
+      <span class="pill" id="status">Status: <code>idle</code></span>
+      <span class="pill">Take hits: <code id="takeHits">0</code></span>
+      <span class="pill">Clips: <code id="clipCount">0</code></span>
+      <span class="pill">Playhead: <code id="playheadLabel">bar 1</code></span>
     </div>
 
-  </div>
+    <div class="pads" id="pads"></div>
 
+    <div class="timelineWrap">
+      <canvas id="timeline" width="1200" height="220"></canvas>
+      <div class="muted hint">Timeline controls: click to set playhead • drag clips to reposition • drag clip edges to resize • Alt/Option+drag to duplicate • Stop twice to return to bar 1</div>
+    </div>
+  </div>
 </div>
 
-<script type="module" src="main.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

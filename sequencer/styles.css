@@ -1,143 +1,171 @@
-* {
-  box-sizing: border-box;
+:root{
+--bg:#0f0f12;
+--panel:#17171c;
+--panel2:#121216;
+--border:#2d2d35;
+--text:#eee;
+--muted:rgba(255,255,255,.72);
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #0f1116;
-  color: #e6e6e6;
+body{
+margin:0;
+font-family:system-ui,sans-serif;
+background:var(--bg);
+color:var(--text);
 }
 
-.workspace {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
+.app{
+width:min(1100px,98vw);
+margin:16px auto;
 }
 
-.main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+h1{
+margin:0 0 8px;
+font-size:18px;
+opacity:.95;
 }
 
-.transport {
-  padding: 10px 16px;
-  background: #161a22;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.muted{
+opacity:.75;
+font-size:13px;
 }
 
-.transport-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+.panel{
+border:1px solid var(--border);
+background:var(--panel);
+border-radius:16px;
+padding:14px;
+box-shadow:0 14px 40px rgba(0,0,0,.45);
 }
 
-.transport-row.sliders label {
-  font-size: 0.8rem;
-  opacity: 0.8;
+/* =============================
+TWO COLUMN CORE LAYOUT
+============================= */
+
+.row{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+margin-top:10px;
+align-items:center;
 }
 
-.transport-row.status {
-  font-size: 0.8rem;
-  gap: 16px;
+/* Elements that should span both columns */
+input[type=range],
+select{
+width:100%;
 }
 
-button {
-  background: #222733;
-  border: 1px solid rgba(255,255,255,0.08);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+/* Status row spans full width per item */
+.row.status-row{
+grid-template-columns:1fr 1fr;
 }
 
-button:hover {
-  background: #2c3242;
+.row.status-row .pill{
+grid-column:auto;
 }
 
-.vertical-stack {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+button{
+border-radius:12px;
+border:1px solid #444;
+background:#23232b;
+color:#fff;
+padding:10px 12px;
+cursor:pointer;
+width:100%;
 }
 
-.performance-pane {
-  height: 50%;
-  padding: 16px;
-  overflow: auto;
+button.primary{
+background:#2a2a42;
+border-color:#5757aa;
 }
 
-.pads {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+button.danger{
+background:#382023;
+border-color:#a35;
 }
 
-.pad {
-  padding: 18px;
-  font-size: 0.9rem;
-  text-align: center;
+button:disabled{
+opacity:.55;
+cursor:not-allowed;
 }
 
-.splitter {
-  height: 6px;
-  cursor: row-resize;
-  background: rgba(255,255,255,0.08);
+.pill{
+display:flex;
+gap:8px;
+align-items:center;
+justify-content:center;
+border:1px solid var(--border);
+background:var(--panel2);
+padding:8px 10px;
+border-radius:999px;
+font-size:13px;
+opacity:.95;
 }
 
-.arrangement-pane {
-  flex: 1;
-  padding: 12px;
-  overflow: hidden;
+/* =============================
+BEAT PADS
+============================= */
+
+.pads{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+margin-top:12px;
 }
 
-canvas {
-  width: 100%;
-  height: 100%;
-  background: #0d0f14;
-  border-radius: 8px;
+.pad{
+height:90px;
+border-radius:14px;
+border:1px solid #444;
+background:#202028;
+color:#fff;
+font-size:16px;
+cursor:pointer;
+user-select:none;
+touch-action:none;
+-webkit-tap-highlight-color:transparent;
 }
 
-.side-panel {
-  width: 280px;
-  padding: 16px;
-  background: #141821;
-  border-left: 1px solid rgba(255,255,255,0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.pad:active{
+transform:scale(.985);
+filter:brightness(1.15);
 }
 
-.side-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* =============================
+TIMELINE
+============================= */
+
+.timelineWrap{
+margin-top:14px;
+border:1px solid var(--border);
+background:var(--panel2);
+border-radius:16px;
+padding:10px;
+overflow-x:auto;
 }
 
-.side-panel h2 {
-  margin: 0;
-  font-size: 1rem;
-  opacity: 0.8;
+canvas{
+width:100%;
+height:220px;
+border-radius:12px;
+background:#0d0d12;
+border:1px solid #23232d;
+display:block;
+min-width:800px;
 }
 
-hr {
-  border: none;
-  border-top: 1px solid rgba(255,255,255,0.08);
+.hint{
+margin-top:8px;
 }
 
-@media (max-width: 900px) {
-  .side-panel {
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 1000;
-    transform: translateX(100%);
-  }
+/* =============================
+SMALL DEVICES TWEAK
+============================= */
+
+@media (max-width:480px){
+h1{ font-size:16px; }
+.muted{ font-size:12px; }
+.pad{ height:100px; }
+canvas{ height:190px; min-width:600px; }
 }

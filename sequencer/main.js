@@ -1,6 +1,3 @@
-// main.js (now an ES module)
-import { currentProject, session as state, timing, timeline, mutations } from './project.js';
-
 /**********************
  * AUDIO + BEATPAD
  **********************/
@@ -14,13 +11,43 @@ function ensureAudio(){
 }
 function now(){return audioCtx.currentTime;}
 
-function secondsPerBeat(){return 60/currentProject.audio.bpm;}
+const timing={ scheduleAhead:0.06, inputLatency:0.045 };
+
+const state={
+  bpm:120,
+  metronomeOn:false,
+  metroTimer:null,
+  metroNext:0,
+
+  isRecording:false,
+  takeStart:0,
+  takeHits:[], // {padId, t}
+  takeLength:0,
+
+  // transport
+  isPlaying:false,
+  transportStartCtxTime:0,
+  transportStartBar:1,
+  playheadBar:1,
+
+  // timeline view
+  zoom:1.0,
+
+  // global quantize defaults
+  quantize:'1/16',
+  swing:0.0, // 0..0.60 (60%)
+  snap:true,
+};
+
+function secondsPerBeat(){return 60/state.bpm;}
 function secondsPerBar(){return secondsPerBeat()*4;}
 
 /**********************
  * QUANTIZE MATH (Option A)
  **********************/
 function quantizeDivisionToBeats(div){
+  // returns beats per grid step
+  // 1/4 => 1 beat, 1/8 => 0.5 beat, 1/16 => 0.25 beat, 1/32 => 0.125 beat
   switch(div){
     case '1/4': return 1;
     case '1/8': return 0.5;
@@ -36,6 +63,7 @@ function quantizeTimeSecWith(tSec, q, swing){
   if(!beatsPerStep) return tSec;
   const stepSec = beatsPerStep * secondsPerBeat();
 
+  // swing: delay every odd step by swing% of step
   const idx = Math.round(tSec / stepSec);
   let qt = idx * stepSec;
   if(idx % 2 === 1 && swing > 0){
@@ -45,22 +73,23 @@ function quantizeTimeSecWith(tSec, q, swing){
 }
 
 function quantizeTimeSec(tSec){
-  return quantizeTimeSecWith(tSec, currentProject.audio.quantize, currentProject.audio.swing);
+  return quantizeTimeSecWith(tSec, state.quantize, state.swing);
 }
 
 function quantizeBarWith(bar, q){
   if(q==='off') return bar;
   const beatsPerStep = quantizeDivisionToBeats(q);
   if(!beatsPerStep) return bar;
-  const stepsPerBar = 4 / beatsPerStep;
+  const stepsPerBar = 4 / beatsPerStep; // 4 beats per bar
   const stepBar = 1 / stepsPerBar;
   const idx = Math.round((bar-1)/stepBar);
   return 1 + idx*stepBar;
 }
 
 function quantizeBar(bar){
-  if(!currentProject.ui.snap) return bar;
-  return quantizeBarWith(bar, currentProject.audio.quantize);
+  // Snap to grid in BAR units using global quantize
+  if(!state.snap) return bar;
+  return quantizeBarWith(bar, state.quantize);
 }
 
 /**********************
@@ -156,6 +185,7 @@ function triggerPad(padId, atTime=now(), fromPlayback=false){
   ensureAudio();
   if(audioCtx.state!=='running') audioCtx.resume();
 
+  // record performance (latency compensated)
   if(state.isRecording && !fromPlayback){
     const raw = now() - state.takeStart - timing.inputLatency;
     const t = Math.max(0, raw);
@@ -200,10 +230,19 @@ function stopMetronome(){
 /**********************
  * TIMELINE DATA MODEL
  **********************/
+const timeline={
+  barsVisible:16,
+  trackY:70,
+  trackH:80,
+  headerH:40,
+  clips:[], // {id, name, startBar, lengthBars, rawHits:[{padId,t}], quantize, swing}
+  nextId:1
+};
+
 function getClipTiming(clip){
   return {
-    quantize: clip.quantize ?? currentProject.audio.quantize,
-    swing: clip.swing ?? currentProject.audio.swing
+    quantize: clip.quantize ?? state.quantize,
+    swing: clip.swing ?? state.swing
   };
 }
 
@@ -219,28 +258,24 @@ function makeClipFromTake(){
   if(!state.takeHits.length) return null;
 
   const clip={
-    id: 'clip'+(timeline.nextId),   // ← DO NOT increment here
+    id: 'clip'+(timeline.nextId++),
     name: 'Take '+(timeline.clips.length+1),
-    startBar: currentProject.ui.snap ? quantizeBar(state.playheadBar) : Math.round(state.playheadBar),
+    startBar: state.snap ? quantizeBar(state.playheadBar) : Math.round(state.playheadBar),
     lengthBars: Math.max(1, Math.ceil((state.takeLength+0.25)/secondsPerBar())),
     rawHits: structuredClone(state.takeHits),
-    quantize: currentProject.audio.quantize,
-    swing: currentProject.audio.swing
+    quantize: state.quantize,
+    swing: state.swing
   };
 
-  mutations.bumpNextClipId();   // ← increment ID counter
-  mutations.addClip(clip);      // ← actually add clip to project
-
+  timeline.clips.push(clip);
   document.getElementById('clipCount').textContent = timeline.clips.length;
   drawTimeline();
-
   return clip;
 }
 
-
 function quantizeCurrentTakeInPlace(){
   if(!state.takeHits.length){ setStatus('no take to quantize'); return; }
-  if(currentProject.audio.quantize==='off'){ setStatus('quantize is OFF'); return; }
+  if(state.quantize==='off'){ setStatus('quantize is OFF'); return; }
 
   state.takeHits = state.takeHits.map(h=>({ padId:h.padId, t: quantizeTimeSec(h.t) }))
     .sort((a,b)=>a.t-b.t);
@@ -253,7 +288,7 @@ function quantizeCurrentTakeInPlace(){
  **********************/
 function setPlayheadBar(bar){
   const raw = Math.max(1, bar);
-  state.playheadBar = currentProject.ui.snap ? quantizeBar(raw) : raw;
+  state.playheadBar = state.snap ? quantizeBar(raw) : raw;
   document.getElementById('playheadLabel').textContent = 'bar '+Math.floor(state.playheadBar);
   drawTimeline();
 }
@@ -272,6 +307,7 @@ function playTimeline(){
   state.transportStartBar = state.playheadBar;
   setStatus('playing');
 
+  // schedule everything in a simple one-shot pass (good for MVP)
   for(const clip of timeline.clips){
     const clipStartSec = (clip.startBar - state.transportStartBar) * secondsPerBar();
     const clipBase = base + clipStartSec;
@@ -285,6 +321,7 @@ function playTimeline(){
     }
   }
 
+  // visual playhead updater
   const startPerf=performance.now();
   const startBar=state.transportStartBar;
   function tick(){
@@ -323,7 +360,7 @@ function barsToX(bar){
   const leftPad=20;
   const rightPad=20;
   const usable=w-leftPad-rightPad;
-  const pxPerBar=(usable/timeline.barsVisible)*currentProject.ui.zoom;
+  const pxPerBar=(usable/timeline.barsVisible)*state.zoom;
   return leftPad + (bar-1)*pxPerBar;
 }
 
@@ -331,7 +368,7 @@ function xToBar(x){
   const leftPad=20;
   const w=canvas.width;
   const usable=w-leftPad-20;
-  const pxPerBar=(usable/timeline.barsVisible)*currentProject.ui.zoom;
+  const pxPerBar=(usable/timeline.barsVisible)*state.zoom;
   return 1 + (x-leftPad)/pxPerBar;
 }
 
@@ -348,7 +385,7 @@ function drawTimeline(){
   const leftPad=20;
   const rightPad=20;
   const usable=w-leftPad-rightPad;
-  const pxPerBar=(usable/timeline.barsVisible)*currentProject.ui.zoom;
+  const pxPerBar=(usable/timeline.barsVisible)*state.zoom;
 
   for(let i=0;i<=timeline.barsVisible;i++){
     const x=leftPad + i*pxPerBar;
@@ -475,10 +512,9 @@ canvas.addEventListener('pointerdown',(e)=>{
     let workingClip=clip;
     if(e.altKey){
       workingClip=structuredClone(clip);
-      workingClip.id = 'clip'+(timeline.nextId);
-      mutations.bumpNextClipId();
+      workingClip.id='clip'+(timeline.nextId++);
       workingClip.name=clip.name+' copy';
-      mutations.addClip(workingClip);
+      timeline.clips.push(workingClip);
       document.getElementById('clipCount').textContent = timeline.clips.length;
     }
 
@@ -503,39 +539,26 @@ canvas.addEventListener('pointermove',(e)=>{
 
   if(drag.mode==='move'){
     const raw = Math.max(1, drag.startStartBar + dxBars);
-    const startBar = currentProject.ui.snap ? quantizeBar(raw) : raw;
-
-    mutations.updateClip(drag.clip.id, { startBar });
-
+    drag.clip.startBar = state.snap ? quantizeBar(raw) : raw;
   } else if(drag.mode==='resizeL'){
-    const end = drag.startStartBar + drag.startLen;               // fixed right edge
+    const end = drag.startStartBar + drag.startLen;
     const rawStart = Math.max(1, drag.startStartBar + dxBars);
-    const snappedStart = currentProject.ui.snap ? quantizeBar(rawStart) : rawStart;
-
-    const newStart = Math.min(snappedStart, end - 1);
-    const newLength = Math.max(1, end - newStart);
-
-    mutations.updateClip(drag.clip.id, {
-      startBar: newStart,
-      lengthBars: newLength
-    });
-
+    const snappedStart = state.snap ? quantizeBar(rawStart) : rawStart;
+    drag.clip.startBar = Math.min(snappedStart, end-1);
+    drag.clip.lengthBars = Math.max(1, end - drag.clip.startBar);
   } else if(drag.mode==='resizeR'){
     const rawLen = Math.max(1, drag.startLen + dxBars);
-
-    let newLength = rawLen;
-    if(currentProject.ui.snap && currentProject.audio.quantize!=='off'){
+    if(state.snap && state.quantize!=='off'){
       const rightEdge = drag.startStartBar + rawLen;
       const snappedRight = quantizeBar(rightEdge);
-      newLength = Math.max(1, snappedRight - drag.startStartBar);
+      drag.clip.lengthBars = Math.max(1, snappedRight - drag.startStartBar);
+    } else {
+      drag.clip.lengthBars = rawLen;
     }
-
-    mutations.updateClip(drag.clip.id, { lengthBars: newLength });
   }
 
   drawTimeline();
 });
-
 
 canvas.addEventListener('pointerup',()=>{ drag=null; });
 canvas.addEventListener('pointercancel',()=>{ drag=null; });
@@ -608,16 +631,16 @@ document.getElementById('btnAddClip').addEventListener('click',()=>{
 });
 
 document.getElementById('btnClearClips').addEventListener('click',()=>{
-  mutations.clearClips();
+  timeline.clips=[];
   document.getElementById('clipCount').textContent='0';
   setStatus('clips cleared');
   drawTimeline();
 });
 
 document.getElementById('btnSnap').addEventListener('click',()=>{
-  mutations.toggleSnap();
-  document.getElementById('snapLabel').textContent = currentProject.ui.snap ? 'ON' : 'OFF';
-  setStatus('snap '+(currentProject.ui.snap?'ON':'OFF'));
+  state.snap = !state.snap;
+  document.getElementById('snapLabel').textContent = state.snap ? 'ON' : 'OFF';
+  setStatus('snap '+(state.snap?'ON':'OFF'));
   drawTimeline();
 });
 
@@ -628,40 +651,40 @@ document.getElementById('btnQTake').addEventListener('click',()=>{
 // sliders
 const bpmEl=document.getElementById('bpm');
 bpmEl.addEventListener('input',(e)=>{
-  mutations.setBpm(Number(e.target.value));
-  document.getElementById('bpmLabel').textContent=currentProject.audio.bpm;
+  state.bpm=Number(e.target.value);
+  document.getElementById('bpmLabel').textContent=state.bpm;
 });
 
 const latEl=document.getElementById('lat');
 latEl.addEventListener('input',(e)=>{
   const ms=Number(e.target.value);
-  mutations.setLatencyMs(ms);
+  timing.inputLatency=ms/1000;
   document.getElementById('latLabel').textContent=ms;
 });
 
 const zoomEl=document.getElementById('zoom');
 zoomEl.addEventListener('input',(e)=>{
-  mutations.setZoom(Number(e.target.value));
-  document.getElementById('zoomLabel').textContent=currentProject.ui.zoom.toFixed(2);
+  state.zoom=Number(e.target.value);
+  document.getElementById('zoomLabel').textContent=state.zoom.toFixed(2);
   drawTimeline();
 });
 
 // quantize
 const qEl=document.getElementById('quantize');
 function refreshQLabel(){
-  document.getElementById('qLabel').textContent = (currentProject.audio.quantize==='off') ? 'OFF' : currentProject.audio.quantize;
+  document.getElementById('qLabel').textContent = (state.quantize==='off') ? 'OFF' : state.quantize;
 }
 qEl.addEventListener('change',(e)=>{
-  mutations.setQuantize(e.target.value);
+  state.quantize = e.target.value;
   refreshQLabel();
-  setStatus('quantize '+(currentProject.audio.quantize==='off'?'OFF':currentProject.audio.quantize));
+  setStatus('quantize '+(state.quantize==='off'?'OFF':state.quantize));
   drawTimeline();
 });
 
 const swingEl=document.getElementById('swing');
 swingEl.addEventListener('input',(e)=>{
   const pct = Number(e.target.value);
-  mutations.setSwing(pct/100);
+  state.swing = pct/100;
   document.getElementById('swingLabel').textContent = pct+'%';
   drawTimeline();
 });
@@ -674,20 +697,20 @@ function runSelfTests(){
     console.assert(quantizeDivisionToBeats('1/4')===1, '1/4 should be 1 beat');
     console.assert(quantizeDivisionToBeats('1/16')===0.25, '1/16 should be 0.25 beat');
 
-    const prevSnap=currentProject.ui.snap;
-    const prevQ=currentProject.audio.quantize;
+    const prevSnap=state.snap;
+    const prevQ=state.quantize;
 
-    mutations.setSnap(true);
-    mutations.setQuantize('1/16');
+    state.snap=true;
+    state.quantize='1/16';
     const snapped = quantizeBar(1.12);
     console.assert(Math.abs(snapped-1.125) < 1e-9, 'bar should snap to nearest 1/16 (1.125)');
 
-    mutations.setQuantize('off');
+    state.quantize='off';
     const free = quantizeBar(1.12);
     console.assert(Math.abs(free-1.12) < 1e-9, 'bar should not snap when quantize is off');
 
-    mutations.setSnap(prevSnap);
-    mutations.setQuantize(prevQ);
+    state.snap=prevSnap;
+    state.quantize=prevQ;
 
     console.log('✅ Self-tests passed');
   }catch(err){
@@ -697,10 +720,7 @@ function runSelfTests(){
 
 // initialize
 refreshQLabel();
-document.getElementById('bpmLabel').textContent = currentProject.audio.bpm;
-document.getElementById('latLabel').textContent = currentProject.audio.latencyMs;
-document.getElementById('zoomLabel').textContent = currentProject.ui.zoom.toFixed(2);
-document.getElementById('snapLabel').textContent = currentProject.ui.snap ? 'ON' : 'OFF';
+document.getElementById('snapLabel').textContent = state.snap ? 'ON' : 'OFF';
 setPlayheadBar(1);
 setStatus('idle');
 drawTimeline();
