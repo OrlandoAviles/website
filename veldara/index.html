@@ -1,0 +1,97 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Veldara Project</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+<div class="hint">Move: Joystick (left side) or WASD / Arrows · Menu: ☰ · In combat: Q/E paradigm shift</div>
+<div id="fieldMenuBtn" title="Menu">☰</div>
+
+<!-- FIELD -->
+<div id="wrap">
+  <canvas id="c"></canvas>
+</div>
+
+<!-- FIELD MENU -->
+<div id="fieldMenu" class="menu">
+  <div class="menuCard">
+    <div class="menuTitle">Field Menu</div>
+    <div class="menuRow">
+      <button id="openParadigms">Paradigms</button>
+      <button id="closeMenu">Close</button>
+    </div>
+    <div class="subHint">Tip: Set your paradigm deck here, then shift instantly in combat.</div>
+  </div>
+</div>
+
+<!-- PARADIGM MENU -->
+<div id="paradigmMenu" class="menu">
+  <div class="menuCard">
+    <div class="menuTitle">Paradigm Deck</div>
+    <div id="paradigmList"></div>
+    <div class="menuRow">
+      <button id="addParadigm">Add Paradigm</button>
+      <button id="closeParadigms">Back</button>
+    </div>
+    <div class="subHint">Paradigms determine party roles. Your active paradigm is the one combat starts with.</div>
+  </div>
+</div>
+
+<!-- COMBAT -->
+<div id="combatScene" aria-hidden="true">
+  <div id="shiftFlash"></div>
+
+  <div id="combatUi">
+    <!-- Top HUD -->
+    <div id="combatTop">
+      <div id="enemyHud" class="hudCard">
+        <div class="hudTitleRow">
+          <div class="hudTitle">ENEMY</div>
+          <div class="hudTag" id="staggerTag" style="display:none;">STAGGERED</div>
+        </div>
+        <div class="hudBars">
+          <div class="hudBarWrap hp">
+            <div class="hudBarFill" id="enemy-hp"></div>
+          </div>
+          <div class="hudBarWrap atb">
+            <div class="hudBarFill" id="enemy-atb"></div>
+          </div>
+          <div class="hudBarWrap chain">
+            <div class="hudBarFill" id="enemy-chain"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="combatHud" class="hudCard">
+        <div>
+          <div class="hudTitle" id="hudParadigmName">Paradigm</div>
+          <div class="hudSub" id="hudParadigmRoles">Roles</div>
+        </div>
+        <div class="hudBtns">
+          <button id="shiftPrev">◀</button>
+          <button id="shiftNext">▶</button>
+          <button id="escapeCombat">Run</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage -->
+    <canvas id="battleStage"></canvas>
+
+    <!-- Bottom HUD -->
+    <div id="combatBottom">
+      <div id="partyHud"></div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script src="main.js" type="module"></script>
+</body>
+</html>
