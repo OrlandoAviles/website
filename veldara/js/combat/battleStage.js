@@ -1,180 +1,212 @@
-// js/combat/battleStage.js
+let canvas, ctx;
 
-let battleCanvas;
-let bctx;
-let battleActors = [];
-let battleAnimId = null;
+let actors = [];
+let enemyActor;
 
-let shakeTime = 0;
-let shakeStrength = 0;
+let screenShake = 0;
+let running = false;
 
-const sprite = new Image();
-sprite.src = "./assets/soldier.png"; // adjust path if needed
+const SPRITE_PATH = "./assets/soldier.png";
+const BG_PATH = "./assets/forest-night.png";
 
-let spriteReady = false;
-sprite.onload = () => {
-  spriteReady = true;
-};
+const bgImage = new Image();
+bgImage.src = BG_PATH;
 
-export function initBattleStage(canvasId = "battleStage") {
-  battleCanvas = document.getElementById(canvasId);
-  bctx = battleCanvas.getContext("2d");
-  resizeBattleStage();
+let bgLoaded = false;
+bgImage.onload = () => bgLoaded = true;
+
+export function initBattleStage() {
+  canvas = document.getElementById("battleStage");
+  ctx = canvas.getContext("2d");
+
+  resize();
+  window.addEventListener("resize", resize);
 }
 
-export function resizeBattleStage() {
-  if (!battleCanvas) return;
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
 
-  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const rect = battleCanvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
 
-  battleCanvas.width = Math.floor(rect.width * dpr);
-  battleCanvas.height = Math.floor(rect.height * dpr);
-
-  bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 export function initBattleActors() {
-  const rect = battleCanvas.getBoundingClientRect();
-  const w = rect.width;
-  const h = rect.height;
 
-  battleActors = [
-    { side:"player", i:0, baseX:w*0.20, baseY:h*0.40, state:"idle", t:0 },
-    { side:"player", i:1, baseX:w*0.20, baseY:h*0.60, state:"idle", t:0 },
-    { side:"player", i:2, baseX:w*0.20, baseY:h*0.80, state:"idle", t:0 },
-    { side:"enemy",  i:0, baseX:w*0.78, baseY:h*0.60, state:"idle", t:0 }
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+
+  const baseY = height * 0.88;
+  const spacing = height * 0.18;
+
+  actors = [
+    createActor(width * 0.18, baseY, false),
+    createActor(width * 0.18, baseY - spacing, false),
+    createActor(width * 0.18, baseY - spacing * 2, false)
   ];
+
+  enemyActor = createActor(width * 0.75, baseY - spacing, true);
 }
 
-export function triggerAttackAnim(playerIndex) {
-  const a = battleActors.find(x => x.side === "player" && x.i === playerIndex);
-  if (!a) return;
-  a.state = "attack";
-  a.t = 0;
+function createActor(x, y, isEnemy) {
+
+  const img = new Image();
+  img.src = SPRITE_PATH;
+
+  return {
+    baseX: x,
+    baseY: y,
+    img,
+    bob: 0,
+    attackOffset: 0,
+    isEnemy
+  };
+}
+
+export function triggerAttackAnim(index) {
+  const actor = actors[index];
+  if (!actor) return;
+
+  actor.attackOffset = actor.isEnemy ? -60 : 60;
+  screenShake = 8;
 }
 
 export function triggerEnemyHit() {
-  const e = battleActors.find(x => x.side === "enemy");
-  if (!e) return;
-  e.state = "hit";
-  e.t = 0;
-
-  // Trigger screen shake
-  shakeTime = 0.18;
-  shakeStrength = 12;
-}
-
-function drawSprite(x, y, scale, isEnemy, scaleX = 1, scaleY = 1) {
-  if (!spriteReady) return;
-
-  const w = sprite.width * scale;
-  const h = sprite.height * scale;
-
-  bctx.save();
-
-  if (isEnemy) {
-    bctx.filter = "hue-rotate(180deg) saturate(1.3)";
-  }
-
-  bctx.translate(x, y);
-
-  // Flip players to face right
-  bctx.scale(
-    isEnemy ? scaleX : -scaleX,
-    scaleY
-  );
-
-  bctx.drawImage(
-    sprite,
-    -w / 2,
-    -h,
-    w,
-    h
-  );
-
-  bctx.restore();
-}
-
-function drawBattleStage() {
-  const rect = battleCanvas.getBoundingClientRect();
-  const w = rect.width;
-  const h = rect.height;
-
-  bctx.clearRect(0, 0, w, h);
-
-  // Screen shake
-  if (shakeTime > 0) {
-    const dx = (Math.random() - 0.5) * shakeStrength;
-    const dy = (Math.random() - 0.5) * shakeStrength;
-    bctx.save();
-    bctx.translate(dx, dy);
-    shakeTime -= 0.016;
-  }
-
-  const now = performance.now();
-
-  battleActors.forEach(actor => {
-
-    const bob = Math.sin((now / 1000) * 2.2 + actor.i * 1.7) * 4;
-
-    let x = actor.baseX;
-    let y = actor.baseY;
-
-    let scaleX = 1 + (bob * 0.01);
-    let scaleY = 1 - (bob * 0.015);
-
-    // Horizontal attack lunge
-    if (actor.state === "attack") {
-      actor.t += 0.08;
-      const p = Math.min(actor.t, 1);
-      const l = Math.sin(p * Math.PI);
-
-      x += (actor.side === "player" ? 1 : -1) * l * 140;
-
-      scaleX += l * 0.15;
-      scaleY -= l * 0.15;
-
-      if (p >= 1) {
-        actor.state = "idle";
-        actor.t = 0;
-      }
-    }
-
-    // Strong enemy recoil
-    if (actor.state === "hit") {
-      actor.t += 0.14;
-      const p = Math.min(actor.t, 1);
-      const impact = Math.sin(p * Math.PI);
-
-      x += impact * 18;
-      scaleX += impact * 0.2;
-      scaleY -= impact * 0.2;
-
-      if (p >= 1) {
-        actor.state = "idle";
-        actor.t = 0;
-      }
-    }
-
-    const scale = 0.18;
-
-    drawSprite(x, y, scale, actor.side === "enemy", scaleX, scaleY);
-  });
-
-  if (shakeTime > 0) {
-    bctx.restore();
-  }
+  enemyActor.attackOffset = -20;
+  screenShake = 10;
 }
 
 export function startBattleRenderLoop() {
-  function loop() {
-    drawBattleStage();
-    battleAnimId = requestAnimationFrame(loop);
-  }
-  loop();
+  running = true;
+  requestAnimationFrame(loop);
 }
 
 export function stopBattleRenderLoop() {
-  if (battleAnimId) cancelAnimationFrame(battleAnimId);
+  running = false;
+}
+
+function loop() {
+  if (!running) return;
+
+  update();
+  draw();
+
+  requestAnimationFrame(loop);
+}
+
+function update() {
+
+  actors.forEach(a => {
+    a.bob += 0.05;
+    a.attackOffset *= 0.85;
+  });
+
+  enemyActor.bob += 0.05;
+  enemyActor.attackOffset *= 0.85;
+
+  screenShake *= 0.8;
+}
+
+function draw() {
+
+  ctx.save();
+
+  if (screenShake > 0.5) {
+    const shakeX = (Math.random() - 0.5) * screenShake;
+    const shakeY = (Math.random() - 0.5) * screenShake;
+    ctx.translate(shakeX, shakeY);
+  }
+
+  drawBackground();
+
+  // draw players from back to front
+  [...actors].reverse().forEach(drawActor);
+
+  drawActor(enemyActor);
+
+  ctx.restore();
+}
+
+function drawBackground() {
+
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+
+  if (bgLoaded) {
+
+    const imgAspect = bgImage.width / bgImage.height;
+    const canvasAspect = width / height;
+
+    let drawWidth, drawHeight;
+
+    if (canvasAspect > imgAspect) {
+      drawWidth = width;
+      drawHeight = width / imgAspect;
+    } else {
+      drawHeight = height;
+      drawWidth = height * imgAspect;
+    }
+
+    // scale down slightly for breathing room
+    drawWidth *= 1.0;
+    drawHeight *= 0.85;
+
+    const x = (width - drawWidth) * 0.5;
+    const y = (height - drawHeight) * 0.6;
+
+    ctx.drawImage(bgImage, x, y, drawWidth, drawHeight);
+
+  } else {
+    ctx.fillStyle = "#0b0e14";
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // vignette
+  const grad = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.6,
+    height * 0.3,
+    width * 0.5,
+    height * 0.6,
+    height * 0.9
+  );
+
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(1, "rgba(0,0,0,0.65)");
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function drawActor(actor) {
+
+  const img = actor.img;
+  if (!img.complete || img.naturalWidth === 0) return;
+
+  const bobOffset = Math.sin(actor.bob) * 6;
+
+  const drawX = actor.baseX + actor.attackOffset;
+  const drawY = actor.baseY + bobOffset;
+
+  const scale = 0.35;
+  const w = img.width * scale;
+  const h = img.height * scale;
+
+  ctx.save();
+
+  if (!actor.isEnemy) {
+    ctx.translate(drawX, drawY);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, -w / 2, -h, w, h);
+  } else {
+    ctx.filter = "hue-rotate(160deg)";
+    ctx.drawImage(img, drawX - w / 2, drawY - h, w, h);
+    ctx.filter = "none";
+  }
+
+  ctx.restore();
 }
