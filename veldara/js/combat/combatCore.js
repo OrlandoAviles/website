@@ -73,11 +73,14 @@ function loop(){
     }
   });
 
-  enemy.atb+=2;
-  if(enemy.atb>=100){
-    const t=alive()[0];
-    if(t)t.hp-=20;
-    enemy.atb=0;
+  enemy.atb += 2;
+  if (enemy.atb >= 100) {
+    const t = alive()[0];
+    if (t) {
+      triggerAttackAnim(0, true); // enemy lunge
+      t.hp -= 20;
+    }
+    enemy.atb = 0;
   }
 
   updateBars();

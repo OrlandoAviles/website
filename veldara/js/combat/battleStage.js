@@ -66,13 +66,19 @@ function createActor(x, y, isEnemy) {
   };
 }
 
-export function triggerAttackAnim(index) {
-  const actor = actors[index];
-  if (!actor) return;
+export function triggerAttackAnim(index, isEnemy = false) {
 
-  actor.attackOffset = actor.isEnemy ? -60 : 60;
-  screenShake = 8;
+  if (isEnemy) {
+    enemyActor.attackOffset = -300; // lunge toward players
+  } else {
+    const actor = actors[index];
+    if (!actor) return;
+    actor.attackOffset = 200; // lunge toward enemy
+  }
+
+  screenShake = 6;
 }
+
 
 export function triggerEnemyHit() {
   enemyActor.attackOffset = -20;
@@ -187,10 +193,16 @@ function drawActor(actor) {
   const img = actor.img;
   if (!img.complete || img.naturalWidth === 0) return;
 
-  const bobOffset = Math.sin(actor.bob) * 6;
+  // Idle cycle
+  const idle = Math.sin(actor.bob);
 
+  // Squash & stretch (subtle)
+  const stretchY = 1 + idle * 0.025;  // vertical stretch
+  const stretchX = 1 - idle * 0.02;   // horizontal compensation
+
+  // Attack offset stays horizontal only
   const drawX = actor.baseX + actor.attackOffset;
-  const drawY = actor.baseY + bobOffset;
+  const drawY = actor.baseY; // FEET STAY GROUNDED
 
   const scale = 0.35;
   const w = img.width * scale;
@@ -198,13 +210,16 @@ function drawActor(actor) {
 
   ctx.save();
 
+  // Move origin to feet
+  ctx.translate(drawX, drawY);
+
   if (!actor.isEnemy) {
-    ctx.translate(drawX, drawY);
-    ctx.scale(-1, 1);
+    ctx.scale(-stretchX, stretchY);
     ctx.drawImage(img, -w / 2, -h, w, h);
   } else {
+    ctx.scale(stretchX, stretchY);
     ctx.filter = "hue-rotate(160deg)";
-    ctx.drawImage(img, drawX - w / 2, drawY - h, w, h);
+    ctx.drawImage(img, -w / 2, -h, w, h);
     ctx.filter = "none";
   }
 
