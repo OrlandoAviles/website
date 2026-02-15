@@ -1,6 +1,4 @@
-// js/combat/combatHud.js
-
-import { players, enemy, paradigms, activeParadigmIndex } from "../state.js";
+import { players, enemy, paradigms, getParadigmIndex } from "../state.js";
 
 let logEl;
 let partyHud;
@@ -10,9 +8,7 @@ const ui = {
   pAtb: [],
   pRole: [],
   enemyHp: null,
-  enemyAtb: null,
-  enemyChain: null,
-  staggerTag: null
+  enemyAtb: null
 };
 
 export function initCombatHud() {
@@ -21,8 +17,6 @@ export function initCombatHud() {
 
   ui.enemyHp = document.getElementById("enemy-hp");
   ui.enemyAtb = document.getElementById("enemy-atb");
-  ui.enemyChain = document.getElementById("enemy-chain");
-  ui.staggerTag = document.getElementById("staggerTag");
 }
 
 export function logMsg(msg) {
@@ -82,23 +76,23 @@ export function updateBars() {
     if (ui.pAtb[i]) ui.pAtb[i].style.width = Math.min(p.atb, 100) + "%";
   });
 
-  ui.enemyHp.style.width = (enemy.hp / enemy.maxHp * 100) + "%";
-  ui.enemyAtb.style.width = Math.min(enemy.atb, 100) + "%";
-  ui.enemyChain.style.width = Math.max(0, Math.min(enemy.chain, 100)) + "%";
+  if (ui.enemyHp)
+    ui.enemyHp.style.width = (enemy.hp / enemy.maxHp * 100) + "%";
 
-  if (ui.staggerTag) {
-    ui.staggerTag.style.display = enemy.staggered ? "inline-block" : "none";
-  }
+  if (ui.enemyAtb)
+    ui.enemyAtb.style.width = Math.min(enemy.atb, 100) + "%";
 }
 
 export function updateParadigmHud() {
   const title = document.getElementById("hudParadigmName");
   const roles = document.getElementById("hudParadigmRoles");
 
-  const p = paradigms[activeParadigmIndex];
+  const index = getParadigmIndex();
+  const p = paradigms[index];
 
   if (!p) return;
 
-  title.textContent = `Paradigm: ${p.name}`;
-  roles.textContent = p.roles.map(r => r.slice(0,3).toUpperCase()).join(" / ");
+  if (title) title.textContent = `Paradigm: ${p.name}`;
+  if (roles)
+    roles.textContent = p.roles.map(r => r.slice(0, 3).toUpperCase()).join(" / ");
 }

@@ -5,6 +5,17 @@ let bctx;
 let battleActors = [];
 let battleAnimId = null;
 
+let shakeTime = 0;
+let shakeStrength = 0;
+
+const sprite = new Image();
+sprite.src = "./assets/soldier.png"; // adjust path if needed
+
+let spriteReady = false;
+sprite.onload = () => {
+  spriteReady = true;
+};
+
 export function initBattleStage(canvasId = "battleStage") {
   battleCanvas = document.getElementById(canvasId);
   bctx = battleCanvas.getContext("2d");
@@ -29,10 +40,10 @@ export function initBattleActors() {
   const h = rect.height;
 
   battleActors = [
-    { side:"player", i:0, baseX:w*0.18, baseY:h*0.35, state:"idle", t:0 },
-    { side:"player", i:1, baseX:w*0.18, baseY:h*0.52, state:"idle", t:0 },
-    { side:"player", i:2, baseX:w*0.18, baseY:h*0.69, state:"idle", t:0 },
-    { side:"enemy",  i:0, baseX:w*0.80, baseY:h*0.52, state:"idle", t:0 }
+    { side:"player", i:0, baseX:w*0.20, baseY:h*0.40, state:"idle", t:0 },
+    { side:"player", i:1, baseX:w*0.20, baseY:h*0.60, state:"idle", t:0 },
+    { side:"player", i:2, baseX:w*0.20, baseY:h*0.80, state:"idle", t:0 },
+    { side:"enemy",  i:0, baseX:w*0.78, baseY:h*0.60, state:"idle", t:0 }
   ];
 }
 
@@ -48,23 +59,41 @@ export function triggerEnemyHit() {
   if (!e) return;
   e.state = "hit";
   e.t = 0;
+
+  // Trigger screen shake
+  shakeTime = 0.18;
+  shakeStrength = 12;
 }
 
-function drawStick(x, y, color) {
-  bctx.fillStyle = color;
+function drawSprite(x, y, scale, isEnemy, scaleX = 1, scaleY = 1) {
+  if (!spriteReady) return;
 
-  bctx.beginPath();
-  bctx.arc(x, y - 22, 8, 0, Math.PI * 2);
-  bctx.fill();
+  const w = sprite.width * scale;
+  const h = sprite.height * scale;
 
-  bctx.fillRect(x - 7, y - 16, 14, 24);
+  bctx.save();
 
-  bctx.beginPath();
-  bctx.moveTo(x - 7, y + 8);
-  bctx.lineTo(x, y + 24);
-  bctx.lineTo(x + 7, y + 8);
-  bctx.closePath();
-  bctx.fill();
+  if (isEnemy) {
+    bctx.filter = "hue-rotate(180deg) saturate(1.3)";
+  }
+
+  bctx.translate(x, y);
+
+  // Flip players to face right
+  bctx.scale(
+    isEnemy ? scaleX : -scaleX,
+    scaleY
+  );
+
+  bctx.drawImage(
+    sprite,
+    -w / 2,
+    -h,
+    w,
+    h
+  );
+
+  bctx.restore();
 }
 
 function drawBattleStage() {
@@ -74,22 +103,37 @@ function drawBattleStage() {
 
   bctx.clearRect(0, 0, w, h);
 
+  // Screen shake
+  if (shakeTime > 0) {
+    const dx = (Math.random() - 0.5) * shakeStrength;
+    const dy = (Math.random() - 0.5) * shakeStrength;
+    bctx.save();
+    bctx.translate(dx, dy);
+    shakeTime -= 0.016;
+  }
+
   const now = performance.now();
 
   battleActors.forEach(actor => {
 
-    const bob = Math.sin((now / 1000) * 2.2 + actor.i * 1.7) * 3;
+    const bob = Math.sin((now / 1000) * 2.2 + actor.i * 1.7) * 4;
 
     let x = actor.baseX;
-    let y = actor.baseY + bob;
+    let y = actor.baseY;
 
+    let scaleX = 1 + (bob * 0.01);
+    let scaleY = 1 - (bob * 0.015);
+
+    // Horizontal attack lunge
     if (actor.state === "attack") {
-      actor.t += 0.07;
+      actor.t += 0.08;
       const p = Math.min(actor.t, 1);
       const l = Math.sin(p * Math.PI);
 
-      x += (actor.side === "player" ? 1 : -1) * l * 110;
-      y -= l * 30;
+      x += (actor.side === "player" ? 1 : -1) * l * 140;
+
+      scaleX += l * 0.15;
+      scaleY -= l * 0.15;
 
       if (p >= 1) {
         actor.state = "idle";
@@ -97,10 +141,15 @@ function drawBattleStage() {
       }
     }
 
+    // Strong enemy recoil
     if (actor.state === "hit") {
-      actor.t += 0.12;
+      actor.t += 0.14;
       const p = Math.min(actor.t, 1);
-      x += Math.sin(p * Math.PI) * 10;
+      const impact = Math.sin(p * Math.PI);
+
+      x += impact * 18;
+      scaleX += impact * 0.2;
+      scaleY -= impact * 0.2;
 
       if (p >= 1) {
         actor.state = "idle";
@@ -108,9 +157,14 @@ function drawBattleStage() {
       }
     }
 
-    const color = actor.side === "enemy" ? "#ff6b6b" : "#7CFF8A";
-    drawStick(x, y, color);
+    const scale = 0.18;
+
+    drawSprite(x, y, scale, actor.side === "enemy", scaleX, scaleY);
   });
+
+  if (shakeTime > 0) {
+    bctx.restore();
+  }
 }
 
 export function startBattleRenderLoop() {
