@@ -30,11 +30,21 @@ export function createDefaultProject() {
       swing: 0.0,
       latencyMs: 45,
     },
+    patterns: [],
+
     timeline: {
       barsVisible: 16,
-      clips: [],
-      nextId: 1,
+      tracks: [
+        {
+          id: "track1",
+          name: "Track 1",
+          instrument: "drumKit",
+          placements: [] // { patternId, startBar }
+        }
+      ],
+      nextPatternId: 1
     },
+
     ui: {
       // future: these become your 3-pane layout percentages
       performanceHeight: 50,
@@ -90,7 +100,7 @@ export const timeline = {
   trackH: 80,
   headerH: 40,
 
-  get clips() { return currentProject.timeline.clips; },
+  get tracks() { return currentProject.timeline.tracks; },
   set clips(_) {
     throw new Error("Direct clip writes are blocked. Use mutations.* helpers.");
   },
