@@ -138,21 +138,33 @@ function renderHands() {
 
   playerHands.forEach((handObj, index) => {
     const wrapper = document.createElement("div");
-    wrapper.style.display = "inline-block";
-    wrapper.style.marginRight = "16px";
+    wrapper.style.display = "flex";
+    wrapper.style.flexDirection = "row";
+    wrapper.style.alignItems = "center";
+    wrapper.style.gap = "10px";
+    wrapper.style.marginRight = "24px";
+
     if (index === activeHandIndex && !roundOver) {
       wrapper.style.outline = "2px solid var(--accent)";
+      wrapper.style.padding = "6px";
+      wrapper.style.borderRadius = "12px";
     }
 
-    handObj.cards.forEach(c => wrapper.appendChild(renderCard(c)));
+    const cardsContainer = document.createElement("div");
+    cardsContainer.style.display = "flex";
+    cardsContainer.style.gap = "10px";
+
+    handObj.cards.forEach(c => cardsContainer.appendChild(renderCard(c)));
 
     const total = handTotals(handObj.cards);
     const score = document.createElement("div");
     score.textContent = `Score: ${total.total}${total.isSoft ? " (soft)" : ""}`;
     score.style.fontSize = "12px";
-    score.style.marginTop = "4px";
+    score.style.color = "var(--muted)";
 
+    wrapper.appendChild(cardsContainer);
     wrapper.appendChild(score);
+
     elPlayerHand.appendChild(wrapper);
   });
 
