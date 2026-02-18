@@ -111,19 +111,25 @@ function draw() {
 
 function renderCard(c, faceDown=false) {
   const div = document.createElement("div");
+
   if (faceDown) {
     div.className = "card back";
     return div;
   }
+
   div.className = `card ${c.color}`;
+
   const small = document.createElement("div");
   small.className = "small";
   small.textContent = `${c.rank}${c.suit}`;
+
   const big = document.createElement("div");
   big.className = "big";
   big.textContent = c.suit;
+
   div.appendChild(small);
   div.appendChild(big);
+
   return div;
 }
 
@@ -138,29 +144,24 @@ function renderHands() {
 
   playerHands.forEach((handObj, index) => {
     const wrapper = document.createElement("div");
-    wrapper.style.display = "flex";
-    wrapper.style.flexDirection = "row";
-    wrapper.style.alignItems = "center";
-    wrapper.style.gap = "10px";
-    wrapper.style.marginRight = "24px";
+    wrapper.className = "player-hand-wrapper";
 
     if (index === activeHandIndex && !roundOver) {
-      wrapper.style.outline = "2px solid var(--accent)";
-      wrapper.style.padding = "6px";
-      wrapper.style.borderRadius = "12px";
+      wrapper.classList.add("active-hand");
     }
 
     const cardsContainer = document.createElement("div");
-    cardsContainer.style.display = "flex";
-    cardsContainer.style.gap = "10px";
+    cardsContainer.className = "hand-stack";
 
-    handObj.cards.forEach(c => cardsContainer.appendChild(renderCard(c)));
+    handObj.cards.forEach(c => {
+      const cardEl = renderCard(c);
+      cardsContainer.appendChild(cardEl);
+    });
 
     const total = handTotals(handObj.cards);
     const score = document.createElement("div");
+    score.className = "hand-score";
     score.textContent = `Score: ${total.total}${total.isSoft ? " (soft)" : ""}`;
-    score.style.fontSize = "12px";
-    score.style.color = "var(--muted)";
 
     wrapper.appendChild(cardsContainer);
     wrapper.appendChild(score);
