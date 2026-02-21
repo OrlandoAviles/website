@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Canvas Gamepad Mini-Game</title>
+  <style>
+    html, body { height: 100%; margin: 0; background:#0b0d12; color:#e7ebff; font-family: system-ui, Segoe UI, Roboto, Arial; }
+    canvas { display:block; margin: 0 auto; background: radial-gradient(1200px 800px at 50% 40%, #121a2b 0%, #080a10 55%, #05060a 100%); }
+    .hud {
+      position: fixed; left: 12px; top: 12px; right: 12px;
+      display:flex; gap: 12px; align-items:flex-start; justify-content:space-between;
+      pointer-events:none; user-select:none;
+    }
+    .panel {
+      pointer-events:none;
+      background: rgba(10,12,18,.55);
+      border: 1px solid rgba(150,170,255,.16);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(8px);
+      max-width: 520px;
+    }
+    .panel h1 { font-size: 14px; margin: 0 0 6px; letter-spacing:.4px; opacity:.95; }
+    .panel p { margin: 0; font-size: 12px; line-height: 1.35; opacity: .85; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(150,170,255,.22); margin-right:6px; }
+    .big {
+      font-size: 18px; font-weight: 650;
+      margin: 0 0 2px;
+    }
+    .sub { font-size: 12px; opacity: .8; margin:0; }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div class="panel">
+      <h1>Controls</h1>
+      <p><span class="pill">Gamepad</span> Left stick move · A boost · B brake · Start pause</p>
+      <p><span class="pill">Keyboard</span> WASD/Arrows move · Space boost · Shift brake · P pause</p>
+      <p style="margin-top:6px; opacity:.75;">Tip: click canvas once if inputs feel asleep (browser focus).</p>
+    </div>
+    <div class="panel" id="status">
+      <p class="big" id="score">0.0s</p>
+      <p class="sub" id="gp">Gamepad: not connected</p>
+    </div>
+  </div>
+
+  <canvas id="c" width="960" height="540"></canvas>
+
+  <script>
+  (() => {
+    "use strict";
+
+    // ---------- Helpers ----------
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const len = (x, y) => Math.hypot(x, y);
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    // ---------- Canvas setup ----------
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    function fit() {
+      // Letterbox to window while preserving internal resolution
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / canvas.width, h / canvas.height);
+      canvas.style.width = Math.floor(canvas.width * scale) + "px";
+      canvas.style.height = Math.floor(canvas.height * scale) + "px";
+    }
+    window.addEventListener("resize", fit);
+    fit();
+
+    // ---------- Input ----------
+    const keys = new Set();
+    window.addEventListener("keydown", (e) => {
+      keys.add(e.code);
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+    }, { passive:false });
+    window.addEventListener("keyup", (e) => keys.delete(e.code));
+    canvas.addEventListener("pointerdown", () => canvas.focus?.());
+
+    // Gamepad state
+    let activePadIndex = null;
+    const gpLabel = document.getElementById("gp");
+
+    window.addEventListener("gamepadconnected", (e) => {
+      activePadIndex = e.gamepad.index;
+      gpLabel.textContent = `Gamepad: connected (${e.gamepad.id})`;
+    });
+
+    window.addEventListener("gamepaddisconnected", (e) => {
+      if (activePadIndex === e.gamepad.index) activePadIndex = null;
+      gpLabel.textContent = "Gamepad: not connected";
+    });
+
+    function readInput() {
+      // returns: {ax, ay, boost, brake, pausePressed}
+      let ax = 0, ay = 0, boost = false, brake = false, pausePressed = false;
+
+      // Keyboard fallback
+      const left  = keys.has("ArrowLeft") || keys.has("KeyA");
+      const right = keys.has("ArrowRight") || keys.has("KeyD");
+      const up    = keys.has("ArrowUp") || keys.has("KeyW");
+      const down  = keys.has("ArrowDown") || keys.has("KeyS");
+
+      ax += (right ? 1 : 0) - (left ? 1 : 0);
+      ay += (down ? 1 : 0) - (up ? 1 : 0);
+
+      boost = boost || keys.has("Space");
+      brake = brake || keys.has("ShiftLeft") || keys.has("ShiftRight");
+
+      // Pause key
+      pausePressed = pausePressed || keys.has("KeyP");
+
+      // Gamepad
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = (activePadIndex != null) ? pads[activePadIndex] : null;
+
+      if (pad) {
+        // Prefer left stick axes 0/1
+        const dz = 0.18; // deadzone
+        const rawX = pad.axes[0] ?? 0;
+        const rawY = pad.axes[1] ?? 0;
+
+        const mx = Math.abs(rawX) < dz ? 0 : rawX;
+        const my = Math.abs(rawY) < dz ? 0 : rawY;
+
+        // If stick has signal, override keyboard direction (feels nicer)
+        if (mx !== 0 || my !== 0) { ax = mx; ay = my; }
+
+        // Standard mapping: 0=A/Cross, 1=B/Circle, 9=Start/Options
+        boost = boost || !!pad.buttons[0]?.pressed;
+        brake = brake || !!pad.buttons[1]?.pressed;
+        pausePressed = pausePressed || !!pad.buttons[9]?.pressed;
+      }
+
+      // Normalize keyboard digital to unit vector (so diagonals aren't faster)
+      const l = len(ax, ay);
+      if (l > 1) { ax /= l; ay /= l; }
+
+      return { ax, ay, boost, brake, pausePressed, hasPad: !!pad };
+    }
+
+    // ---------- Game state ----------
+    const W = canvas.width, H = canvas.height;
+
+    const state = {
+      running: true,
+      paused: false,
+      gameOver: false,
+      timeAlive: 0,
+      shake: 0,
+      lastPauseToggle: 0
+    };
+
+    const ship = {
+      x: W * 0.5,
+      y: H * 0.5,
+      vx: 0,
+      vy: 0,
+      r: 12
+    };
+
+    const rocks = [];
+    function spawnRock() {
+      // Spawn at edges heading inward-ish
+      const side = Math.floor(rand(0, 4));
+      let x, y;
+      if (side === 0) { x = -30; y = rand(0, H); }
+      if (side === 1) { x = W + 30; y = rand(0, H); }
+      if (side === 2) { x = rand(0, W); y = -30; }
+      if (side === 3) { x = rand(0, W); y = H + 30; }
+
+      const cx = W * 0.5, cy = H * 0.5;
+      const angle = Math.atan2(cy - y, cx - x) + rand(-0.8, 0.8);
+      const speed = rand(35, 120) * (1 + state.timeAlive / 60); // gently ramps
+      const r = rand(14, 40);
+
+      rocks.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r,
+        spin: rand(-1.8, 1.8),
+        a: rand(0, Math.PI * 2)
+      });
+    }
+
+    function reset() {
+      ship.x = W * 0.5; ship.y = H * 0.5;
+      ship.vx = 0; ship.vy = 0;
+      rocks.length = 0;
+      state.timeAlive = 0;
+      state.gameOver = false;
+      state.paused = false;
+      state.shake = 0;
+      // Start with a few rocks
+      for (let i = 0; i < 6; i++) spawnRock();
+    }
+
+    reset();
+
+    // ---------- Loop ----------
+    let last = performance.now();
+    const scoreEl = document.getElementById("score");
+
+    function update(dt) {
+      const input = readInput();
+      gpLabel.textContent = input.hasPad ? "Gamepad: connected (active)" : (activePadIndex != null ? "Gamepad: connected" : "Gamepad: not connected");
+
+      // Pause toggle (edge detect-ish with cooldown)
+      if (input.pausePressed && (performance.now() - state.lastPauseToggle) > 250) {
+        state.paused = !state.paused;
+        state.lastPauseToggle = performance.now();
+      }
+
+      if (state.paused) return;
+
+      if (!state.gameOver) state.timeAlive += dt;
+      scoreEl.textContent = `${state.timeAlive.toFixed(1)}s`;
+
+      if (state.gameOver) {
+        // Restart with boost/space
+        if (input.boost) reset();
+        return;
+      }
+
+      // Ship physics
+      const accel = input.boost ? 520 : 320;
+      const brake = input.brake ? 0.86 : 0.93;
+
+      ship.vx += input.ax * accel * dt;
+      ship.vy += input.ay * accel * dt;
+
+      ship.vx *= Math.pow(brake, dt * 60);
+      ship.vy *= Math.pow(brake, dt * 60);
+
+      // Cap speed
+      const maxSpeed = input.boost ? 420 : 280;
+      const sp = len(ship.vx, ship.vy);
+      if (sp > maxSpeed) {
+        ship.vx = ship.vx / sp * maxSpeed;
+        ship.vy = ship.vy / sp * maxSpeed;
+      }
+
+      ship.x += ship.vx * dt;
+      ship.y += ship.vy * dt;
+
+      // Soft bounds (wrap)
+      if (ship.x < -20) ship.x = W + 20;
+      if (ship.x > W + 20) ship.x = -20;
+      if (ship.y < -20) ship.y = H + 20;
+      if (ship.y > H + 20) ship.y = -20;
+
+      // Rocks
+      const targetRocks = 6 + Math.floor(state.timeAlive / 6); // more over time
+      while (rocks.length < targetRocks) spawnRock();
+
+      for (const r of rocks) {
+        r.x += r.vx * dt;
+        r.y += r.vy * dt;
+        r.a += r.spin * dt;
+
+        // Wrap rocks
+        if (r.x < -80) r.x = W + 80;
+        if (r.x > W + 80) r.x = -80;
+        if (r.y < -80) r.y = H + 80;
+        if (r.y > H + 80) r.y = -80;
+
+        // Collision
+        const dx = r.x - ship.x;
+        const dy = r.y - ship.y;
+        const hit = (dx*dx + dy*dy) < (r.r + ship.r) * (r.r + ship.r);
+        if (hit) {
+          state.gameOver = true;
+          state.shake = 10;
+          break;
+        }
+      }
+
+      state.shake *= Math.pow(0.88, dt * 60);
+    }
+
+    function draw() {
+      // Camera shake
+      const sx = (Math.random() - 0.5) * state.shake;
+      const sy = (Math.random() - 0.5) * state.shake;
+
+      ctx.save();
+      ctx.clearRect(0, 0, W, H);
+      ctx.translate(sx, sy);
+
+      // Stars
+      ctx.globalAlpha = 0.35;
+      for (let i = 0; i < 70; i++) {
+        const x = (i * 97) % W;
+        const y = (i * 181) % H;
+        ctx.fillRect(x, y, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+
+      // Rocks
+      for (const r of rocks) {
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        ctx.rotate(r.a);
+
+        ctx.beginPath();
+        const spikes = 10;
+        for (let i = 0; i < spikes; i++) {
+          const ang = (i / spikes) * Math.PI * 2;
+          const rr = r.r * rand(0.78, 1.05);
+          ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = "rgba(190,200,255,0.35)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Ship (triangle pointing in velocity direction)
+      const ang = Math.atan2(ship.vy, ship.vx);
+      ctx.save();
+      ctx.translate(ship.x, ship.y);
+      ctx.rotate(isFinite(ang) && (Math.abs(ship.vx) + Math.abs(ship.vy) > 0.5) ? ang : -Math.PI/2);
+
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-12, -9);
+      ctx.lineTo(-7, 0);
+      ctx.lineTo(-12, 9);
+      ctx.closePath();
+
+      ctx.strokeStyle = state.gameOver ? "rgba(255,120,120,0.9)" : "rgba(210,220,255,0.9)";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Thruster flare
+      const boosting = (keys.has("Space")) || (activePadIndex!=null && navigator.getGamepads?.()[activePadIndex]?.buttons?.[0]?.pressed);
+      if (boosting && !state.gameOver && !state.paused) {
+        ctx.beginPath();
+        ctx.moveTo(-10, -4);
+        ctx.lineTo(-24, 0);
+        ctx.lineTo(-10, 4);
+        ctx.strokeStyle = "rgba(170,200,255,0.7)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      // Overlays
+      if (state.paused) {
+        overlay("PAUSED", "Press Start / P to resume");
+      } else if (state.gameOver) {
+        overlay("CRASHED", "Press A / Space to restart");
+      }
+
+      ctx.restore();
+    }
+
+    function overlay(title, subtitle) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(230,235,255,0.95)";
+      ctx.font = "700 44px system-ui, Segoe UI, Roboto, Arial";
+      ctx.fillText(title, W/2, H/2 - 10);
+
+      ctx.fillStyle = "rgba(230,235,255,0.78)";
+      ctx.font = "500 16px system-ui, Segoe UI, Roboto, Arial";
+      ctx.fillText(subtitle, W/2, H/2 + 22);
+      ctx.restore();
+    }
+
+    function loop(now) {
+      const dt = clamp((now - last) / 1000, 0, 0.033); // cap for stability
+      last = now;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
