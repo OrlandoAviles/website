@@ -40,6 +40,9 @@ function loadSettings() {
       ) {
         App.activeDeck = data.app.activeDeck;
       }
+      if (typeof data.app.cardScale === "number") {
+        App.cardScale = clamp(data.app.cardScale, 0.6, 1.6);
+      }
     }
 
     return true;
