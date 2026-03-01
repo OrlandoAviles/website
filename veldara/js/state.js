@@ -15,19 +15,28 @@ export const players = [
 ];
 
 export const enemy = {
-  hp:600,
-  maxHp:600,
-  atb:0,
-  chain:0,
-  staggered:false
+  hp: 600,
+  maxHp: 600,
+  atb: 0,
+
+  // Chain system
+  chain: 0,          // multiplier percent (100 = baseline)
+  decay: 0,          // falling value in neutral
+  decaySpeed: 0,
+  staggered: false,
+  staggerTimer: 0
 };
 
 export function resetEnemy() {
-  enemy.hp = 600;
-  enemy.maxHp = 600;
+  enemy.hp = 6000;
+  enemy.maxHp = 6000;
   enemy.atb = 0;
+
   enemy.chain = 0;
+  enemy.decay = 0;
+  enemy.decaySpeed = 0;
   enemy.staggered = false;
+  enemy.staggerTimer = 0;
 }
 
 export const paradigms = [

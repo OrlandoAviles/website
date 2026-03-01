@@ -2,8 +2,7 @@ import {
   players,
   enemy,
   resetEnemy,
-  setGameState,
-  getGameState
+  setGameState
 } from "../state.js";
 
 import {
@@ -26,29 +25,174 @@ import {
 
 import { applyParadigm } from "../paradigms.js";
 
-let battleOver=false;
-let timer=null;
+let battleOver = false;
+let timer = null;
 
-function alive(){return players.filter(p=>p.hp>0);}
-
-function damageEnemy(amount){
-  enemy.hp=Math.max(0,enemy.hp-amount);
+function alive() {
+  return players.filter(p => p.hp > 0);
 }
 
-function roleAction(p,i){
+/* =========================
+   CHAIN / STAGGER CONSTANTS
+========================= */
+
+const THRESHOLD = 350;
+const FIRST_HIT_CHAIN = 100;
+
+const RAVAGER_CHAIN_GAIN = 45;
+
+const BASE_DECAY_SPEED = 95;
+const RAVAGER_ACCEL = 28;
+
+const COMMANDO_STABILIZE = 42;
+const MIN_DECAY_SPEED = 35;
+
+const STAGGER_SECONDS = 5.0;
+const STAGGER_BASE_MULT = 500;
+
+const TICK_RATE = 0.1; // matches 100ms loop
+
+
+/* =========================
+   DAMAGE WITH MULTIPLIER
+========================= */
+
+function damageEnemy(baseAmount) {
+  const mult = enemy.chain > 0 ? enemy.chain / 100 : 1;
+  const dmg = Math.round(baseAmount * mult);
+  enemy.hp = Math.max(0, enemy.hp - dmg);
+  return dmg;
+}
+
+
+/* =========================
+   STAGGER ENTRY
+========================= */
+
+function enterStagger() {
+  enemy.staggered = true;
+  enemy.chain = STAGGER_BASE_MULT;
+  enemy.staggerTimer = STAGGER_SECONDS;
+  logMsg("STAGGER!");
+}
+
+
+/* =========================
+   ROLE MECHANICS
+========================= */
+
+function handleRavagerHit() {
+
+  if (!enemy.staggered) {
+
+    if (enemy.chain === 0) {
+      enemy.chain = FIRST_HIT_CHAIN;
+      enemy.decaySpeed = BASE_DECAY_SPEED;
+    } else {
+      enemy.chain += RAVAGER_CHAIN_GAIN;
+      enemy.decaySpeed += RAVAGER_ACCEL;
+    }
+
+    enemy.decay = enemy.chain;
+
+    if (enemy.chain >= THRESHOLD) {
+      enterStagger();
+    }
+
+  } else {
+    enemy.chain += 18; // grow multiplier during stagger
+  }
+}
+
+function handleCommandoHit() {
+
+  if (!enemy.staggered) {
+
+    // Snap to 100 baseline if below it
+    if (enemy.chain < 100) {
+
+      enemy.chain = 100;
+
+      if (enemy.decaySpeed === 0) {
+        enemy.decaySpeed = BASE_DECAY_SPEED;
+      }
+    }
+
+    if (enemy.chain > 0) {
+      enemy.decaySpeed = Math.max(
+        MIN_DECAY_SPEED,
+        enemy.decaySpeed - COMMANDO_STABILIZE
+      );
+
+      enemy.decay = enemy.chain;
+    }
+
+  } else {
+    enemy.chain += 10; // modest stagger growth
+  }
+}
+
+
+/* =========================
+   CHAIN UPDATE LOOP
+========================= */
+
+function updateChain() {
+
+  if (!enemy.staggered && enemy.chain > 0) {
+
+    enemy.decay -= enemy.decaySpeed * TICK_RATE;
+
+    if (enemy.decay > enemy.chain) {
+      enemy.decay = enemy.chain;
+    }
+
+    if (enemy.decay <= 0) {
+      enemy.chain = 0;
+      enemy.decay = 0;
+      enemy.decaySpeed = 0;
+      logMsg("Chain dropped.");
+    }
+
+  } else if (enemy.staggered) {
+
+    enemy.staggerTimer -= TICK_RATE;
+
+    if (enemy.staggerTimer <= 0) {
+      enemy.staggered = false;
+      enemy.chain = 0;
+      enemy.decay = 0;
+      enemy.decaySpeed = 0;
+      logMsg("Stagger ended.");
+    }
+  }
+}
+
+
+/* =========================
+   ROLE ACTIONS
+========================= */
+
+function roleAction(p, i) {
+
   triggerAttackAnim(i);
 
-  if(p.role==="Commando"){
-    damageEnemy(45);
+  if (p.role === "Ravager") {
+    const dmg = damageEnemy(35);
     triggerEnemyHit();
-    logMsg(`P${i+1} attacks`);
+    logMsg(`P${i+1} Ravager → ${dmg}`);
+    handleRavagerHit();
   }
-  if(p.role==="Ravager"){
-    damageEnemy(35);
+
+  if (p.role === "Commando") {
+    const dmg = damageEnemy(45);
     triggerEnemyHit();
-    logMsg(`P${i+1} rapid hits`);
+    logMsg(`P${i+1} Commando → ${dmg}`);
+    handleCommandoHit();
   }
+
   if (p.role === "Medic") {
+
     const targets = players
       .filter(pl => pl.hp > 0)
       .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
@@ -61,54 +205,75 @@ function roleAction(p,i){
   }
 }
 
-function loop(){
-  if(battleOver)return;
 
-  players.forEach((p,i)=>{
-    if(p.hp<=0)return;
-    p.atb+=p.atbRate*1.6;
-    if(p.atb>=100){
-      roleAction(p,i);
-      p.atb=0;
+/* =========================
+   MAIN LOOP
+========================= */
+
+function loop() {
+
+  if (battleOver) return;
+
+  players.forEach((p, i) => {
+
+    if (p.hp <= 0) return;
+
+    p.atb += p.atbRate * 1.6;
+
+    if (p.atb >= 100) {
+      roleAction(p, i);
+      p.atb = 0;
     }
   });
 
   enemy.atb += 2;
+
   if (enemy.atb >= 100) {
+
     const t = alive()[0];
+
     if (t) {
-      triggerAttackAnim(0, true); // enemy lunge
+      triggerAttackAnim(0, true);
       t.hp -= 20;
     }
+
     enemy.atb = 0;
   }
 
+  updateChain();
   updateBars();
 
-  if(enemy.hp<=0){
-    battleOver=true;
+  if (enemy.hp <= 0) {
+    battleOver = true;
     logMsg("Victory!");
-    setTimeout(endCombat,800);
+    setTimeout(endCombat, 800);
   }
 
-  timer=setTimeout(loop,100);
+  timer = setTimeout(loop, 100);
 }
 
-export function startCombat(){
-  setGameState("combat");
-  document.getElementById("combatScene").style.display="block";
 
-  battleOver=false;
+/* =========================
+   PUBLIC API
+========================= */
+
+export function startCombat() {
+
+  setGameState("combat");
+  document.getElementById("combatScene").style.display = "block";
+
+  battleOver = false;
   clearLog();
   resetEnemy();
-  players.forEach(p=>p.atb=0);
+
+  players.forEach(p => p.atb = 0);
 
   buildPartyHud();
   initBattleStage();
   initBattleActors();
   startBattleRenderLoop();
 
-  applyParadigm(0,{silent:true});
+  applyParadigm(0, { silent: true });
   updatePartyRoleLabels();
   updateParadigmHud();
   updateBars();
@@ -117,9 +282,11 @@ export function startCombat(){
   loop();
 }
 
-export function endCombat(){
+export function endCombat() {
+
   clearTimeout(timer);
   stopBattleRenderLoop();
-  document.getElementById("combatScene").style.display="none";
+
+  document.getElementById("combatScene").style.display = "none";
   setGameState("field");
 }
