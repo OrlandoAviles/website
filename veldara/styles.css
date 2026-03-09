@@ -15,11 +15,16 @@
   --enemy2:#ff9a9a;
 }
 
+
+/* =========================
+BASE
+========================= */
+
 html,body{
   margin:0;
   height:100%;
-  background:var(--bg);
   overflow:hidden;
+  background:var(--bg);
   color:var(--ink);
   font-family:system-ui,Segoe UI,Roboto,Arial;
 }
@@ -27,7 +32,7 @@ html,body{
 
 
 /* =========================
-FIELD
+FIELD WORLD
 ========================= */
 
 #wrap{
@@ -106,7 +111,7 @@ HUD LAYER
 
 
 /* =========================
-ENEMY HUD
+ENEMY HUD (TOP CENTER)
 ========================= */
 
 #enemyHud{
@@ -126,7 +131,7 @@ ENEMY HUD
 .hudBar{
   height:10px;
   border-radius:8px;
-  background:rgba(255,255,255,0.15);
+  background:rgba(255,255,255,.15);
   overflow:hidden;
   margin-top:6px;
 }
@@ -150,26 +155,31 @@ ENEMY HUD
 }
 
 #staggerTag{
+  display:none;
   text-align:center;
   margin-top:6px;
   font-size:11px;
   letter-spacing:1px;
   color:#ffd27a;
-  display:none;
 }
 
 
 
 /* =========================
-PARADIGM HUD
+PARADIGM HUD (TOP RIGHT)
 ========================= */
 
 #paradigmHud{
   top:20px;
   right:20px;
   width:220px;
+
   font-size:12px;
   text-align:right;
+
+  background:rgba(0,0,0,.25);
+  padding:8px;
+  border-radius:10px;
 }
 
 #hudParadigmName{
@@ -177,7 +187,7 @@ PARADIGM HUD
 }
 
 #hudParadigmRoles{
-  opacity:.8;
+  opacity:.85;
   margin-top:2px;
 }
 
@@ -187,22 +197,25 @@ PARADIGM HUD
 
 .shiftBtns button{
   margin-left:4px;
+
   background:#1a1f33;
   border:none;
   color:white;
+
   padding:4px 8px;
   border-radius:6px;
+
   cursor:pointer;
 }
 
 
 
 /* =========================
-PARTY HUD
+PARTY HUD (BOTTOM LEFT)
 ========================= */
 
 #partyHud{
-  bottom:30px;
+  bottom:60px;
   left:20px;
   width:260px;
 }
@@ -220,7 +233,7 @@ PARTY HUD
 }
 
 .rowRole{
-  opacity:.7;
+  opacity:.75;
   font-size:10px;
   text-transform:uppercase;
 }
@@ -228,7 +241,7 @@ PARTY HUD
 .rowBar{
   height:8px;
   border-radius:6px;
-  background:rgba(255,255,255,0.12);
+  background:rgba(255,255,255,.12);
   overflow:hidden;
   margin-top:4px;
 }
@@ -250,22 +263,25 @@ PARTY HUD
 
 
 /* =========================
-FLOATING DAMAGE NUMBERS
+FLOATING COMBAT NUMBERS
 ========================= */
 
 #combatFx{
   inset:0;
   pointer-events:none;
+  z-index:12;
 }
 
 .floatingNumber{
   position:absolute;
-  transform:translate(-50%, -50%);
+
+  transform:translate(-50%,-50%);
+
   font-size:20px;
   font-weight:700;
-  letter-spacing:.5px;
+
   text-shadow:
-    0 2px 8px rgba(0,0,0,.75),
+    0 2px 8px rgba(0,0,0,.8),
     0 0 2px rgba(0,0,0,.9);
 
   opacity:0;
@@ -287,15 +303,17 @@ FLOATING DAMAGE NUMBERS
 @keyframes floatUp{
   0%{
     opacity:0;
-    transform:translate(-50%, -10px) scale(.92);
+    transform:translate(-50%,-10px) scale(.92);
   }
+
   15%{
     opacity:1;
-    transform:translate(-50%, -20px) scale(1);
+    transform:translate(-50%,-20px) scale(1);
   }
+
   100%{
     opacity:0;
-    transform:translate(-50%, -52px) scale(1.03);
+    transform:translate(-50%,-52px) scale(1.03);
   }
 }
 
