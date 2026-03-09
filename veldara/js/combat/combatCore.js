@@ -6,12 +6,14 @@ import {
 } from "../state.js";
 
 import {
+  initCombatHud,
   buildPartyHud,
   updateBars,
   updatePartyRoleLabels,
   logMsg,
   clearLog,
-  updateParadigmHud
+  updateParadigmHud,
+  spawnFloatingNumber
 } from "./combatHud.js";
 
 import {
@@ -20,7 +22,9 @@ import {
   startBattleRenderLoop,
   stopBattleRenderLoop,
   triggerAttackAnim,
-  triggerEnemyHit
+  triggerEnemyHit,
+  getEnemyScreenPos,
+  getPlayerScreenPos
 } from "./battleStage.js";
 
 import { applyParadigm } from "../paradigms.js";
@@ -32,13 +36,8 @@ function alive() {
   return players.filter(p => p.hp > 0);
 }
 
-/* =========================
-   CHAIN / STAGGER CONSTANTS
-========================= */
-
 const THRESHOLD = 350;
 const FIRST_HIT_CHAIN = 100;
-
 const RAVAGER_CHAIN_GAIN = 45;
 
 const BASE_DECAY_SPEED = 95;
@@ -47,15 +46,10 @@ const RAVAGER_ACCEL = 10;
 const COMMANDO_STABILIZE = 92;
 const MIN_DECAY_SPEED = 15;
 
-const STAGGER_SECONDS = 20.0;
+const STAGGER_SECONDS = 20;
 const STAGGER_BASE_MULT = 500;
 
-const TICK_RATE = 0.1; // matches 100ms loop
-
-
-/* =========================
-   DAMAGE WITH MULTIPLIER
-========================= */
+const TICK_RATE = 0.1;
 
 function damageEnemy(baseAmount) {
   const mult = enemy.chain > 0 ? enemy.chain / 100 : 1;
@@ -64,27 +58,19 @@ function damageEnemy(baseAmount) {
   return dmg;
 }
 
-
-/* =========================
-   STAGGER ENTRY
-========================= */
-
 function enterStagger() {
   enemy.staggered = true;
   enemy.chain = STAGGER_BASE_MULT;
   enemy.staggerTimer = STAGGER_SECONDS;
+
+  const pos = getEnemyScreenPos();
+  spawnFloatingNumber("STAGGER!", pos.x, pos.y - 40, "chain");
+
   logMsg("STAGGER!");
 }
 
-
-/* =========================
-   ROLE MECHANICS
-========================= */
-
 function handleRavagerHit() {
-
   if (!enemy.staggered) {
-
     if (enemy.chain === 0) {
       enemy.chain = FIRST_HIT_CHAIN;
       enemy.decaySpeed = BASE_DECAY_SPEED;
@@ -95,27 +81,18 @@ function handleRavagerHit() {
 
     enemy.decay = enemy.chain;
 
-    if (enemy.chain >= THRESHOLD) {
-      enterStagger();
-    }
-
+    if (enemy.chain >= THRESHOLD) enterStagger();
   } else {
-    enemy.chain += 18; // grow multiplier during stagger
+    enemy.chain += 18;
   }
 }
 
 function handleCommandoHit() {
-
   if (!enemy.staggered) {
-
-    // Snap to 100 baseline if below it
     if (enemy.chain < 100) {
-
       enemy.chain = 100;
-
-      if (enemy.decaySpeed === 0) {
+      if (enemy.decaySpeed === 0)
         enemy.decaySpeed = BASE_DECAY_SPEED;
-      }
     }
 
     if (enemy.chain > 0) {
@@ -126,26 +103,14 @@ function handleCommandoHit() {
 
       enemy.decay = enemy.chain;
     }
-
   } else {
-    enemy.chain += 10; // modest stagger growth
+    enemy.chain += 10;
   }
 }
 
-
-/* =========================
-   CHAIN UPDATE LOOP
-========================= */
-
 function updateChain() {
-
   if (!enemy.staggered && enemy.chain > 0) {
-
     enemy.decay -= enemy.decaySpeed * TICK_RATE;
-
-    if (enemy.decay > enemy.chain) {
-      enemy.decay = enemy.chain;
-    }
 
     if (enemy.decay <= 0) {
       enemy.chain = 0;
@@ -153,9 +118,7 @@ function updateChain() {
       enemy.decaySpeed = 0;
       logMsg("Chain dropped.");
     }
-
   } else if (enemy.staggered) {
-
     enemy.staggerTimer -= TICK_RATE;
 
     if (enemy.staggerTimer <= 0) {
@@ -163,78 +126,89 @@ function updateChain() {
       enemy.chain = 0;
       enemy.decay = 0;
       enemy.decaySpeed = 0;
+
       logMsg("Stagger ended.");
     }
   }
 }
-
-
-/* =========================
-   ROLE ACTIONS
-========================= */
 
 function roleAction(p, i) {
 
   triggerAttackAnim(i);
 
   if (p.role === "Ravager") {
+
     const dmg = damageEnemy(35);
     triggerEnemyHit();
-    logMsg(`P${i+1} Ravager → ${dmg}`);
+
+    const pos = getEnemyScreenPos();
+    spawnFloatingNumber(dmg, pos.x, pos.y, "damage");
+
     handleRavagerHit();
+    logMsg(`P${i+1} Ravager → ${dmg}`);
   }
 
   if (p.role === "Commando") {
+
     const dmg = damageEnemy(45);
     triggerEnemyHit();
-    logMsg(`P${i+1} Commando → ${dmg}`);
+
+    const pos = getEnemyScreenPos();
+    spawnFloatingNumber(dmg, pos.x, pos.y, "damage");
+
     handleCommandoHit();
+    logMsg(`P${i+1} Commando → ${dmg}`);
   }
 
   if (p.role === "Medic") {
 
     const targets = players
       .filter(pl => pl.hp > 0)
-      .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+      .sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp));
 
     if (targets.length > 0) {
+
       const t = targets[0];
       t.hp = Math.min(t.maxHp, t.hp + 30);
+
+      const pos = getPlayerScreenPos(players.indexOf(t));
+      spawnFloatingNumber("+30", pos.x, pos.y, "heal");
+
       logMsg(`P${i+1} heals 30`);
     }
   }
 }
 
-
-/* =========================
-   MAIN LOOP
-========================= */
-
 function loop() {
 
   if (battleOver) return;
 
-  players.forEach((p, i) => {
+  players.forEach((p,i)=>{
 
-    if (p.hp <= 0) return;
+    if(p.hp<=0) return;
 
     p.atb += p.atbRate * 1.6;
 
-    if (p.atb >= 100) {
-      roleAction(p, i);
+    if(p.atb >=100){
+      roleAction(p,i);
       p.atb = 0;
     }
+
   });
 
   enemy.atb += 2;
 
-  if (enemy.atb >= 100) {
+  if(enemy.atb >=100){
 
     const t = alive()[0];
 
-    if (t) {
-      triggerAttackAnim(0, true);
+    if(t){
+
+      triggerAttackAnim(0,true);
       t.hp -= 20;
+
+      const pos = getPlayerScreenPos(players.indexOf(t));
+      spawnFloatingNumber("20", pos.x, pos.y, "damage");
     }
 
     enemy.atb = 0;
@@ -243,50 +217,53 @@ function loop() {
   updateChain();
   updateBars();
 
-  if (enemy.hp <= 0) {
+  if(enemy.hp <=0){
+
     battleOver = true;
     logMsg("Victory!");
-    setTimeout(endCombat, 800);
+
+    setTimeout(endCombat,800);
   }
 
-  timer = setTimeout(loop, 100);
+  timer = setTimeout(loop,100);
 }
 
-
-/* =========================
-   PUBLIC API
-========================= */
-
-export function startCombat() {
+export function startCombat(){
 
   setGameState("combat");
-  document.getElementById("combatScene").style.display = "block";
+  document.getElementById("combatScene").style.display="block";
 
-  battleOver = false;
+  battleOver=false;
+
   clearLog();
   resetEnemy();
 
-  players.forEach(p => p.atb = 0);
+  players.forEach(p=>p.atb=0);
 
+  initCombatHud();
   buildPartyHud();
+
   initBattleStage();
   initBattleActors();
   startBattleRenderLoop();
 
-  applyParadigm(0, { silent: true });
+  applyParadigm(0,{silent:true});
+
   updatePartyRoleLabels();
   updateParadigmHud();
   updateBars();
 
   logMsg("Encounter!");
+
   loop();
 }
 
-export function endCombat() {
+export function endCombat(){
 
   clearTimeout(timer);
   stopBattleRenderLoop();
 
-  document.getElementById("combatScene").style.display = "none";
+  document.getElementById("combatScene").style.display="none";
+
   setGameState("field");
 }

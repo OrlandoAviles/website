@@ -13,7 +13,7 @@ const bgImage = new Image();
 bgImage.src = BG_PATH;
 
 let bgLoaded = false;
-bgImage.onload = () => bgLoaded = true;
+bgImage.onload = () => (bgLoaded = true);
 
 export function initBattleStage() {
   canvas = document.getElementById("battleStage");
@@ -34,7 +34,6 @@ function resize() {
 }
 
 export function initBattleActors() {
-
   const rect = canvas.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
@@ -52,7 +51,6 @@ export function initBattleActors() {
 }
 
 function createActor(x, y, isEnemy) {
-
   const img = new Image();
   img.src = SPRITE_PATH;
 
@@ -67,18 +65,16 @@ function createActor(x, y, isEnemy) {
 }
 
 export function triggerAttackAnim(index, isEnemy = false) {
-
   if (isEnemy) {
-    enemyActor.attackOffset = -300; // lunge toward players
+    enemyActor.attackOffset = -300;
   } else {
     const actor = actors[index];
     if (!actor) return;
-    actor.attackOffset = 200; // lunge toward enemy
+    actor.attackOffset = 200;
   }
 
   screenShake = 6;
 }
-
 
 export function triggerEnemyHit() {
   enemyActor.attackOffset = -20;
@@ -104,8 +100,7 @@ function loop() {
 }
 
 function update() {
-
-  actors.forEach(a => {
+  actors.forEach((a) => {
     a.bob += 0.05;
     a.attackOffset *= 0.85;
   });
@@ -117,7 +112,6 @@ function update() {
 }
 
 function draw() {
-
   ctx.save();
 
   if (screenShake > 0.5) {
@@ -128,22 +122,18 @@ function draw() {
 
   drawBackground();
 
-  // draw players from back to front
   [...actors].reverse().forEach(drawActor);
-
   drawActor(enemyActor);
 
   ctx.restore();
 }
 
 function drawBackground() {
-
   const rect = canvas.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
 
   if (bgLoaded) {
-
     const imgAspect = bgImage.width / bgImage.height;
     const canvasAspect = width / height;
 
@@ -157,21 +147,17 @@ function drawBackground() {
       drawWidth = height * imgAspect;
     }
 
-    // scale down slightly for breathing room
-    drawWidth *= 1.0;
     drawHeight *= 0.85;
 
     const x = (width - drawWidth) * 0.5;
     const y = (height - drawHeight) * 0.6;
 
     ctx.drawImage(bgImage, x, y, drawWidth, drawHeight);
-
   } else {
     ctx.fillStyle = "#0b0e14";
     ctx.fillRect(0, 0, width, height);
   }
 
-  // vignette
   const grad = ctx.createRadialGradient(
     width * 0.5,
     height * 0.6,
@@ -189,20 +175,16 @@ function drawBackground() {
 }
 
 function drawActor(actor) {
-
   const img = actor.img;
   if (!img.complete || img.naturalWidth === 0) return;
 
-  // Idle cycle
   const idle = Math.sin(actor.bob);
 
-  // Squash & stretch (subtle)
-  const stretchY = 1 + idle * 0.025;  // vertical stretch
-  const stretchX = 1 - idle * 0.02;   // horizontal compensation
+  const stretchY = 1 + idle * 0.025;
+  const stretchX = 1 - idle * 0.02;
 
-  // Attack offset stays horizontal only
   const drawX = actor.baseX + actor.attackOffset;
-  const drawY = actor.baseY; // FEET STAY GROUNDED
+  const drawY = actor.baseY;
 
   const scale = 0.35;
   const w = img.width * scale;
@@ -210,7 +192,6 @@ function drawActor(actor) {
 
   ctx.save();
 
-  // Move origin to feet
   ctx.translate(drawX, drawY);
 
   if (!actor.isEnemy) {
@@ -224,4 +205,20 @@ function drawActor(actor) {
   }
 
   ctx.restore();
+}
+
+export function getEnemyScreenPos() {
+  return {
+    x: enemyActor.baseX + enemyActor.attackOffset,
+    y: enemyActor.baseY - 120
+  };
+}
+
+export function getPlayerScreenPos(i) {
+  const actor = actors[i];
+
+  return {
+    x: actor.baseX + actor.attackOffset,
+    y: actor.baseY - 120
+  };
 }
