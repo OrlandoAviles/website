@@ -113,11 +113,14 @@
             <option>32x32</option>
             <option>48x48</option>
             <option>64x64</option>
+            <option>128x128</option>
+            <option>256x256</option>
+            <option>512x512</option>
           </select>
         </div>
         <div class="row">
           <label>Zoom:</label>
-          <input id="zoom" type="range" min="4" max="48" step="1" value="24" class="slider"/>
+          <input id="zoom" type="range" min="2" max="48" step="1" value="24" class="slider"/>
         </div>
         <div class="row">
           <label><input type="checkbox" id="gridToggle" checked/> Grid</label>
@@ -185,6 +188,13 @@
   const el = sel => document.querySelector(sel);
   const create = (tag, attrs={})=>{ const n=document.createElement(tag); Object.assign(n, attrs); return n; };
   const download = (blob, filename) => { const url=URL.createObjectURL(blob); const a=create('a',{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); };
+  function autoScaleForResolution(size){
+    if(size <= 32) return 24;
+    if(size <= 64) return 16;
+    if(size <= 128) return 8;
+    if(size <= 256) return 4;
+    return 2;
+  }
 
   // --- State ----------------------------------------------------------------
   const state = {
@@ -221,38 +231,60 @@
     state.w = w; state.h = h;
     pix.width = w; pix.height = h;
     pctx.clearRect(0,0,w,h);
-    // reset frames
     const blank = pctx.createImageData(w,h);
     state.frames = [blank];
     state.current = 0;
+    state.history = [];
+    state.redo = [];
+    state.pan.x = 0;
+    state.pan.y = 0;
+
+    const auto = autoScaleForResolution(Math.max(w, h));
+    el('#zoom').value = auto;
+    state.scale = auto;
+
     commitHistory();
-    refresh();
     rebuildFrameThumbs();
-    drawGrid();
+    setScale(auto);
   }
 
   function setScale(s) {
     state.scale = s;
-    const size = Math.max(128, Math.min(768, Math.max(state.w, state.h)*s));
-    display.width = size; display.height = size;
-    grid.width = size - 28; grid.height = size - 28; // account for stage padding
-    drawGrid();
+    const size = Math.max(128, Math.min(2048, Math.max(state.w, state.h) * s));
+    display.width = size;
+    display.height = size;
+    grid.width = display.width;
+    grid.height = display.height;
     refresh();
+    drawGrid();
   }
 
   function drawGrid(){
     gctx.clearRect(0,0,grid.width,grid.height);
     if(!state.grid) return;
-    const step = Math.floor(grid.width / state.w);
-    gctx.globalAlpha = 0.35;
+
+    const step = state.scale;
+    const offsetX = (display.width - state.w*step)/2 + state.pan.x;
+    const offsetY = (display.height - state.h*step)/2 + state.pan.y;
+
     gctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid');
     gctx.lineWidth = 1;
-    for(let x=0;x<=state.w;x++){
-      const gx = Math.round(x*step)+.5; gctx.beginPath(); gctx.moveTo(gx,0); gctx.lineTo(gx,grid.height); gctx.stroke();
+    gctx.globalAlpha = 0.35;
+    gctx.beginPath();
+
+    for(let x = 0; x <= state.w; x++){
+      const px = Math.round(offsetX + x*step) + 0.5;
+      gctx.moveTo(px, offsetY);
+      gctx.lineTo(px, offsetY + state.h*step);
     }
-    for(let y=0;y<=state.h;y++){
-      const gy = Math.round(y*step)+.5; gctx.beginPath(); gctx.moveTo(0,gy); gctx.lineTo(grid.width,gy); gctx.stroke();
+
+    for(let y = 0; y <= state.h; y++){
+      const py = Math.round(offsetY + y*step) + 0.5;
+      gctx.moveTo(offsetX, py);
+      gctx.lineTo(offsetX + state.w*step, py);
     }
+
+    gctx.stroke();
     gctx.globalAlpha = 1;
   }
 
@@ -260,14 +292,12 @@
   function prevFrame(){ return state.frames[state.current-1]; }
 
   function refresh(){
-    // draw checkerboard background
     dctx.save();
     dctx.clearRect(0,0,display.width,display.height);
     const s = state.scale;
     const offsetX = (display.width - state.w*s)/2 + state.pan.x;
     const offsetY = (display.height - state.h*s)/2 + state.pan.y;
 
-    // onion skin (previous frame)
     if(state.onion && state.current>0){
       const pf = prevFrame();
       if(pf){
@@ -280,13 +310,11 @@
       }
     }
 
-    // current frame
     const tmp = create('canvas'); tmp.width = state.w; tmp.height = state.h;
     const tctx = tmp.getContext('2d'); tctx.putImageData(activeFrame(),0,0);
     dctx.imageSmoothingEnabled = false;
     dctx.drawImage(tmp, 0,0,state.w,state.h, offsetX, offsetY, state.w*s, state.h*s);
 
-    // mirror axis
     if(state.mirrorX){
       dctx.globalAlpha = .2; dctx.fillStyle = '#ffffff';
       const mx = offsetX + Math.floor(state.w/2)*s;
@@ -298,7 +326,6 @@
   }
 
   // --- Input handling -------------------------------------------------------
-  const stage = el('#stage');
   let drawing = false; let startPos = null; let lastPos = null;
 
   function screenToPixel(x, y){
@@ -312,10 +339,23 @@
 
   function inBounds(p){ return p.x>=0 && p.y>=0 && p.x<state.w && p.y<state.h; }
 
-  function putPixel(img, x,y, color){
-    const {data,width} = img; const i = (y*width + x)*4;
+  function putPixel(img, x, y, color){
+    const {data,width} = img;
+    const i = (y*width + x)*4;
+
+    if(color === 'erase'){
+      data[i] = 0;
+      data[i+1] = 0;
+      data[i+2] = 0;
+      data[i+3] = 0;
+      return;
+    }
+
     const [r,g,b,a] = hexToRgba(color);
-    data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=Math.round(a*255);
+    data[i] = r;
+    data[i+1] = g;
+    data[i+2] = b;
+    data[i+3] = Math.round(a*255);
   }
   function getPixel(img,x,y){ const i=(y*img.width+x)*4; const d=img.data; return [d[i],d[i+1],d[i+2],d[i+3]]; }
   function rgbaEq(a,b){ return a[0]===b[0] && a[1]===b[1] && a[2]===b[2] && a[3]===b[3]; }
@@ -330,7 +370,6 @@
   function rgbaToHex(r,g,b){ return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
   function commitHistory(){
-    // store a copy of current frame
     const fr = activeFrame();
     const copy = new ImageData(new Uint8ClampedArray(fr.data), fr.width, fr.height);
     state.history.push(copy);
@@ -338,6 +377,7 @@
     state.redo = [];
     rebuildFrameThumbs();
     refresh();
+    drawGrid();
   }
 
   function undo(){
@@ -346,14 +386,14 @@
     state.redo.push(cur);
     const prev = state.history[state.history.length-1];
     state.frames[state.current] = new ImageData(new Uint8ClampedArray(prev.data), prev.width, prev.height);
-    refresh(); rebuildFrameThumbs();
+    refresh(); rebuildFrameThumbs(); drawGrid();
   }
   function redo(){
     if(state.redo.length===0) return;
     const nxt = state.redo.pop();
     state.frames[state.current] = new ImageData(new Uint8ClampedArray(nxt.data), nxt.width, nxt.height);
     state.history.push(nxt);
-    refresh(); rebuildFrameThumbs();
+    refresh(); rebuildFrameThumbs(); drawGrid();
   }
 
   function startDraw(ev){
@@ -361,6 +401,8 @@
     if(!inBounds(p)) return;
     drawing = true; startPos = lastPos = p; commitHistory();
     drawAt(p);
+    refresh();
+    drawGrid();
   }
   function moveDraw(ev){
     if(state.pan.active) return;
@@ -369,7 +411,7 @@
     if(!inBounds(p)) return;
     if(state.tool==='pencil' || state.tool==='eraser'){
       drawLine(lastPos, p);
-      lastPos = p; refresh(); rebuildFrameThumbs();
+      lastPos = p; refresh(); rebuildFrameThumbs(); drawGrid();
     }
   }
   function endDraw(ev){
@@ -378,7 +420,7 @@
       const p = screenToPixel(ev.clientX, ev.clientY); if(!inBounds(p)) return;
       if(state.tool==='line') drawLine(startPos, p);
       if(state.tool==='rect') drawRect(startPos, p);
-      refresh(); rebuildFrameThumbs();
+      refresh(); rebuildFrameThumbs(); drawGrid();
     }
   }
 
@@ -392,9 +434,9 @@
       if(a>0){ el('#color').value = rgbaToHex(r,g,b); state.color = el('#color').value; }
       return;
     }
-    if(state.tool==='fill') { floodFill(p); refresh(); rebuildFrameThumbs(); return; }
+    if(state.tool==='fill') { floodFill(p); refresh(); rebuildFrameThumbs(); drawGrid(); return; }
 
-    const col = state.tool==='eraser' ? '#00000000' : state.color;
+    const col = state.tool==='eraser' ? 'erase' : state.color;
 
     for(let by=0; by<brush; by++){
       for(let bx=0; bx<brush; bx++){
@@ -411,7 +453,7 @@
 
   function drawLine(a,b){
     const fr = activeFrame();
-    const col = state.tool==='eraser' ? '#00000000' : state.color;
+    const col = state.tool==='eraser' ? 'erase' : state.color;
     const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
     const sx = a.x < b.x ? 1 : -1; const sy = a.y < b.y ? 1 : -1;
     let x=a.x, y=a.y, err = dx - dy;
@@ -468,7 +510,7 @@
       const close = create('div',{className:'x', innerText:'×'});
       close.onclick=(e)=>{ e.stopPropagation(); deleteFrame(idx); };
       th.appendChild(close);
-      th.onclick=()=>{ state.current = idx; commitHistory(); rebuildFrameThumbs(); refresh(); };
+      th.onclick=()=>{ state.current = idx; state.history = []; state.redo = []; commitHistory(); rebuildFrameThumbs(); refresh(); drawGrid(); };
       wrap.appendChild(th);
     });
   }
@@ -479,13 +521,17 @@
                        : pctx.createImageData(state.w, state.h);
     state.frames.splice(state.current+1, 0, blank);
     state.current++;
-    commitHistory(); rebuildFrameThumbs(); refresh();
+    state.history = [];
+    state.redo = [];
+    commitHistory(); rebuildFrameThumbs(); refresh(); drawGrid();
   }
   function deleteFrame(idx){
-    if(state.frames.length===1) return; // keep at least one
+    if(state.frames.length===1) return;
     state.frames.splice(idx,1);
     state.current = Math.max(0, Math.min(state.current, state.frames.length-1));
-    commitHistory(); rebuildFrameThumbs(); refresh();
+    state.history = [];
+    state.redo = [];
+    commitHistory(); rebuildFrameThumbs(); refresh(); drawGrid();
   }
 
   // --- Export / Import ------------------------------------------------------
@@ -505,19 +551,24 @@
     state.w = obj.w; state.h = obj.h; pix.width=obj.w; pix.height=obj.h;
     state.frames = obj.frames.map(arr=> new ImageData(new Uint8ClampedArray(arr), obj.w, obj.h));
     state.current = 0;
-    setScale(state.scale); // re-fit canvases
+    state.history = [];
+    state.redo = [];
+
+    const auto = autoScaleForResolution(Math.max(obj.w, obj.h));
+    el('#zoom').value = auto;
+    setScale(auto);
+
     commitHistory(); rebuildFrameThumbs(); refresh(); drawGrid();
   }
 
   function exportPNG(){
-    // export current frame
     const c = toCanvas(activeFrame());
     c.toBlob(b=>download(b,'sprite.png'));
   }
 
   function exportSpritesheet(){
-    const cols = state.frames.length; const rows = 1; // horizontal strip
-    const c = create('canvas'); c.width = state.w * cols; c.height = state.h * rows;
+    const cols = state.frames.length;
+    const c = create('canvas'); c.width = state.w * cols; c.height = state.h;
     const ctx = c.getContext('2d');
     state.frames.forEach((fr,i)=>{ ctx.putImageData(fr, i*state.w, 0); });
     c.toBlob(b=>download(b, 'spritesheet.png'));
@@ -531,15 +582,14 @@
   el('#color').addEventListener('input', e=>{ state.color=e.target.value; });
   el('#brush').addEventListener('input', e=>{ state.brush=clamp(parseInt(e.target.value||'1'),1,8); });
   el('#gridToggle').addEventListener('change', e=>{ state.grid=e.target.checked; drawGrid(); });
-  el('#onionToggle').addEventListener('change', e=>{ state.onion=e.target.checked; refresh(); });
-  el('#mirrorToggle').addEventListener('change', e=>{ state.mirrorX=e.target.checked; refresh(); });
+  el('#onionToggle').addEventListener('change', e=>{ state.onion=e.target.checked; refresh(); drawGrid(); });
+  el('#mirrorToggle').addEventListener('change', e=>{ state.mirrorX=e.target.checked; refresh(); drawGrid(); });
 
   el('#zoom').addEventListener('input', e=> setScale(parseInt(e.target.value)) );
 
   el('#resSelect').addEventListener('change', e=>{
     const [w,h] = e.target.value.split('x').map(Number);
     setResolution(w,h);
-    setScale(state.scale);
   });
 
   el('#newBtn').onclick=()=>{ setResolution(state.w, state.h); };
@@ -577,18 +627,23 @@
 
   // Mouse / touch events on stage
   display.addEventListener('mousedown', (e)=>{
-    if(e.button===1 || state.tool==='move' || state.pan.active){ // middle mouse / pan
+    if(e.button===1 || state.tool==='move' || state.pan.active){
       state.pan.active=true; state.pan.startX=e.clientX-state.pan.x; state.pan.startY=e.clientY-state.pan.y; return;
     }
     startDraw(e);
   });
   display.addEventListener('mousemove', (e)=>{
-    if(state.pan.active){ state.pan.x = e.clientX - state.pan.startX; state.pan.y = e.clientY - state.pan.startY; refresh(); return; }
+    if(state.pan.active){
+      state.pan.x = e.clientX - state.pan.startX;
+      state.pan.y = e.clientY - state.pan.startY;
+      refresh();
+      drawGrid();
+      return;
+    }
     moveDraw(e);
   });
   window.addEventListener('mouseup', (e)=>{ if(state.pan.active){ state.pan.active=false; } endDraw(e); });
 
-  // Touch support
   display.addEventListener('touchstart', (e)=>{ const t=e.touches[0]; startDraw({clientX:t.clientX, clientY:t.clientY}); e.preventDefault(); }, {passive:false});
   display.addEventListener('touchmove', (e)=>{ const t=e.touches[0]; moveDraw({clientX:t.clientX, clientY:t.clientY}); e.preventDefault(); }, {passive:false});
   display.addEventListener('touchend', (e)=>{ endDraw({clientX:0,clientY:0}); e.preventDefault(); }, {passive:false});
@@ -603,7 +658,7 @@
     if(k==='i') setTool('picker');
     if(k==='l') setTool('line');
     if(k==='r') setTool('rect');
-    if(k==='m'){ state.mirrorX=!state.mirrorX; el('#mirrorToggle').checked=state.mirrorX; refresh(); }
+    if(k==='m'){ state.mirrorX=!state.mirrorX; el('#mirrorToggle').checked=state.mirrorX; refresh(); drawGrid(); }
     if(k===']'){ state.brush = clamp(state.brush+1,1,8); el('#brush').value=state.brush; }
     if(k==='['){ state.brush = clamp(state.brush-1,1,8); el('#brush').value=state.brush; }
     if(k==='z' && (e.ctrlKey||e.metaKey) && !e.shiftKey){ e.preventDefault(); undo(); }
@@ -617,18 +672,16 @@
     if(!state.playing) return;
     const dt = (ts - lastTime) / 1000; lastTime = ts; acc += dt;
     const frameTime = 1/ state.fps;
-    if(acc >= frameTime){ acc -= frameTime; state.current = (state.current+1)%state.frames.length; rebuildFrameThumbs(); refresh(); }
+    if(acc >= frameTime){ acc -= frameTime; state.current = (state.current+1)%state.frames.length; rebuildFrameThumbs(); refresh(); drawGrid(); }
     requestAnimationFrame(playLoop);
   }
 
   // Boot ---------------------------------------------------------------------
   function boot(){
     buildSwatches();
-    setResolution(16,16);
-    setScale(24);
     setTool('pencil');
     document.querySelector('.tool[data-tool="pencil"]').classList.add('active');
-    refresh();
+    setResolution(16,16);
   }
   boot();
   </script>

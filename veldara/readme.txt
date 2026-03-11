@@ -1,2 +1,0 @@
--no paradigm names. Paradigms will be called Strats and will be identified by their three tier color combination on the menu. i.e. com/rav/med or com-rav-med perhaps in the js, would be the name of the paradigm itself. also rename the roles to match the universe instead of ripping off of ff13 lol
--prologue, three soldiers investigate a purple crystal in the woods. Inciting incident kills them off at the end.
