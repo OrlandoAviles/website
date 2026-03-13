@@ -1,4 +1,4 @@
-import { players, enemy, paradigms, getParadigmIndex } from "../state.js";
+import { players, enemy, paradigms, getParadigmIndex } from "../core/state.js";
 
 let logEl;
 let partyHud;

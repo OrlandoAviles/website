@@ -1,5 +1,5 @@
-import { getGameState } from "./state.js";
-import { getMovementAxis } from "./input.js";
+import { getGameState } from "../core/state.js";
+import { getMovementAxis } from "../core/input.js";
 
 export function createField({canvasId="c"}={}){
 

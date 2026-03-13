@@ -25,8 +25,8 @@ let targetY = 0;
 ASSETS
 ========================= */
 
-const SPRITE_PATH = "./assets/soldier.png";
-const BG_PATH = "./assets/forest-night.png";
+const SPRITE_PATH = "./assets/sprites/soldier.png";
+const BG_PATH = "./assets/backgrounds/forest-night.png";
 
 const bgImage = new Image();
 bgImage.src = BG_PATH;

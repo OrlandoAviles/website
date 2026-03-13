@@ -1,5 +1,5 @@
-import { players, paradigms, getParadigmIndex, setParadigmIndex } from "./state.js";
-import { updatePartyRoleLabels, updateParadigmHud, logMsg } from "./combat/combatHud.js";
+import { players, paradigms, getParadigmIndex, setParadigmIndex } from "../core/state.js";
+import { updatePartyRoleLabels, updateParadigmHud, logMsg } from "../combat/combatHud.js";
 
 export function applyParadigm(index,{silent=false}={}){
   const list=paradigms;

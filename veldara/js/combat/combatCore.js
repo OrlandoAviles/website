@@ -3,7 +3,7 @@ import {
   enemy,
   resetEnemy,
   setGameState
-} from "../state.js";
+} from "../core/state.js";
 
 import {
   buildPartyHud,
@@ -27,7 +27,7 @@ import {
   getPlayerScreenPos
 } from "./battleStage.js";
 
-import { applyParadigm } from "../paradigms.js";
+import { applyParadigm } from "../systems/paradigms.js";
 
 
 let battleOver = false;

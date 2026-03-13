@@ -1,10 +1,10 @@
 
 import { initInput, onKeyOnce } from "./input.js";
-import { createField } from "./field.js";
-import { initCombatHud } from "./combat/combatHud.js";
-import { shiftPrev, shiftNext } from "./paradigms.js";
+import { createField } from "../field/field.js";
+import { initCombatHud } from "../combat/combatHud.js";
+import { shiftPrev, shiftNext } from "../systems/paradigms.js";
 import { getGameState } from "./state.js";
-import { startCombat, endCombat } from "./combat/combatCore.js";
+import { startCombat, endCombat } from "../combat/combatCore.js";
 
 initInput();
 initCombatHud();
